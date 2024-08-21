@@ -19,7 +19,7 @@ export default defineNuxtConfig({
       },
       title: 'ReFlux',
       link: [
-        { rel: 'canonical', href: 'https://reflux.vercel.app/' },
+        { rel: 'canonical', href: 'https://reflux.replicate.dev/' },
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ],
       meta: [
@@ -51,13 +51,13 @@ export default defineNuxtConfig({
           hid: 'og:url',
           name: 'og:url',
           property: 'og:url',
-          content: 'https://reflux.vercel.app'
+          content: 'https://reflux.replicate.dev'
         },
         {
           hid: 'og:site_name',
           name: 'og:site_name',
           property: 'og:site_name',
-          content: 'reflux.vercel.app'
+          content: 'reflux.replicate.dev'
         },
         {
           hid: 'og:title',
@@ -75,7 +75,7 @@ export default defineNuxtConfig({
           hid: 'og:image',
           name: 'og:image',
           property: 'og:image',
-          content: 'https://reflux.vercel.app/cover.jpg'
+          content: 'https://reflux.replicate.dev/cover.jpg'
         },
         {
           hid: 'msapplication-TileColor',
@@ -91,7 +91,7 @@ export default defineNuxtConfig({
         {
           hid: 'apple-mobile-web-app-title',
           name: 'apple-mobile-web-app-title',
-          content: 'reflux.vercel.app'
+          content: 'reflux.replicate.dev'
         }
       ],
       script: [

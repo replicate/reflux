@@ -14,8 +14,8 @@
           color="red"
           variant="solid"
         ) Beta
-  .flex.gap-4
-    .font-light.content-center
+  .flex.gap-2
+    .text-sm.font-light.content-center
       | Replicate 
       a.underline.underline-offset-4(
         class="decoration-[0.5px] hover:decoration-2"
@@ -30,6 +30,12 @@
       placeholder="Replicate API token..."
       trailing
     )
+    u-button(
+      @click="openCode"
+      color="white"
+      icon="i-heroicons-code-bracket"
+      size="xs"
+    ) Code
 </template>
 
 <script>
@@ -39,7 +45,12 @@ export default {
   name: 'UiTopPanel',
   setup: () => ({
     replicate_api_token: useLocalStorage('reflux-replicate-api-token', null)
-  })
+  }),
+  methods: {
+    openCode() {
+      window.open('https://github.com/replicate/reflux', '_blank').focus()
+    }
+  }
 }
 </script>
 
