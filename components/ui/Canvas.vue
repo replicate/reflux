@@ -9,10 +9,10 @@
   @touchend="handleTouchEnd"
 )
   .canvas(:style="canvasStyle")
-    .dot(
-      v-for="dot in visibleDots"
-      :key="dot.id"
-      :style="dotStyle(dot)"
+    .dot-group(
+      v-for="group in visibleDotGroups"
+      :key="group.id"
+      :style="dotGroupStyle(group)"
     )
     .image(
       v-for="output in outputs"
@@ -110,7 +110,7 @@ export default {
       lastY: 0,
       dotSize: 2,
       dotSpacing: 20,
-      minZoom: 0.75,
+      minZoom: 0.4,
       maxZoom: 8,
       draggingImage: null,
       imageOffsetX: 0,
@@ -126,8 +126,8 @@ export default {
         transform: `scale(${this.scale}) translate(${this.offsetX}px, ${this.offsetY}px)`
       }
     },
-    visibleDots() {
-      const dots = []
+    visibleDotGroups() {
+      const groups = []
       const viewportWidth = window.innerWidth
       const viewportHeight = window.innerHeight
 
@@ -137,19 +137,28 @@ export default {
       const visibleRight = visibleLeft + viewportWidth / this.scale
       const visibleBottom = visibleTop + viewportHeight / this.scale
 
-      // Calculate the range of dots to render with a fixed buffer
-      const buffer = 2 * this.dotSpacing // Fixed buffer of two dot spacings
-      const startX = Math.floor((visibleLeft - buffer) / this.dotSpacing)
-      const startY = Math.floor((visibleTop - buffer) / this.dotSpacing)
-      const endX = Math.ceil((visibleRight + buffer) / this.dotSpacing)
-      const endY = Math.ceil((visibleBottom + buffer) / this.dotSpacing)
+      // Calculate the range of dot groups to render with a fixed buffer
+      const buffer = 2 * this.dotSpacing
+      const groupSize = 20 // Number of dots in each direction for a group
+      const startX = Math.floor(
+        (visibleLeft - buffer) / (this.dotSpacing * groupSize)
+      )
+      const startY = Math.floor(
+        (visibleTop - buffer) / (this.dotSpacing * groupSize)
+      )
+      const endX = Math.ceil(
+        (visibleRight + buffer) / (this.dotSpacing * groupSize)
+      )
+      const endY = Math.ceil(
+        (visibleBottom + buffer) / (this.dotSpacing * groupSize)
+      )
 
       for (let x = startX; x <= endX; x++) {
         for (let y = startY; y <= endY; y++) {
-          dots.push({ id: `${x}-${y}`, x, y })
+          groups.push({ id: `${x}-${y}`, x, y })
         }
       }
-      return dots
+      return groups
     }
   },
   methods: {
@@ -229,16 +238,22 @@ export default {
       this.canvasState.offsetX = this.offsetX
       this.canvasState.offsetY = this.offsetY
     },
-    dotStyle(dot) {
+    dotGroupStyle(group) {
       const size = this.dotSize / this.scale
+      const groupSize = 20 // Same as in visibleDotGroups
+      const groupWidth = this.dotSpacing * groupSize
       return {
         position: 'absolute',
-        left: `${dot.x * this.dotSpacing}px`,
-        top: `${dot.y * this.dotSpacing}px`,
-        width: `${size}px`,
-        height: `${size}px`,
-        backgroundColor: '#555',
-        borderRadius: '50%'
+        left: `${group.x * groupWidth}px`,
+        top: `${group.y * groupWidth}px`,
+        width: `${groupWidth}px`,
+        height: `${groupWidth}px`,
+        backgroundImage: `radial-gradient(circle at center, #aaa ${
+          size / 2
+        }px, transparent ${size / 2}px)`,
+        backgroundSize: `${this.dotSpacing}px ${this.dotSpacing}px`,
+        backgroundPosition: '0 0',
+        backgroundRepeat: 'repeat'
       }
     },
     onImageLoad(id) {
@@ -371,4 +386,7 @@ export default {
       width: 100%
       height: 100%
       object-fit: cover
+
+.dot-group
+  position: absolute
 </style>
