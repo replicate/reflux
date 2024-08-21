@@ -1,5 +1,5 @@
 <template lang="pug">
-.flex.flex-col.gap-y-4.pt-2
+.flex.flex-col.gap-y-4
 
   //- Models
   u-form-group(
