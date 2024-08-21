@@ -1,6 +1,9 @@
 <template lang="pug">
 .flex.flex-row.items-center.w-full.h-14.border-b.px-2
   .flex-grow.flex.items-center.font-thin.text-3xl
+    img.h-8.pl-1.py-1.pr-3.mr-3.border-r(
+      src="/replicate-logo.svg"
+    )
     span.animate-text
       | Re
       span.plicate plicate

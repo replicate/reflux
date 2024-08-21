@@ -110,7 +110,7 @@ export default defineNuxtConfig({
         */
       ],
       bodyAttrs: {
-        class: 'antialiased'
+        class: 'antialiased overscroll-x-none'
       }
     }
   },
