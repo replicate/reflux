@@ -33,6 +33,26 @@
       v-model="aspect_ratio"
       :options="aspect_ratio_options"
     )
+  //- Number of outputs (conditional)
+  u-form-group(
+    v-if="versions.length <= 1"
+    label="Number of outputs"
+    name="num_outputs"
+  )
+    .flex.items-center.gap-x-4
+      u-range.flex-grow(
+        v-model="num_outputs"
+        :min="1"
+        :max="4"
+        :step="1"
+      )
+      u-input.w-24(
+        v-model="num_outputs"
+        type="number"
+        min="1"
+        max="4"
+        step="1"
+      )
   //- LoRA scale
   u-form-group(
     label="LoRA scale"
@@ -149,6 +169,7 @@ export default {
     versions: useLocalStorage('reflux-versions', []),
     prompt: useLocalStorage('reflux-prompt', ''),
     aspect_ratio: useLocalStorage('reflux-aspect_ratio', '1:1'),
+    num_outputs: useLocalStorage('reflux-num_outputs', 1),
     lora_scale: useLocalStorage('reflux-lora_scale', 1),
     num_inference_steps: useLocalStorage('reflux-num_inference_steps', 28),
     model: useLocalStorage('reflux-model', 'dev'),
@@ -209,6 +230,7 @@ export default {
         await this.createBatch({
           replicate_api_token: this.replicate_api_token,
           versions: this.versions,
+          num_outputs: this.num_outputs,
           input: {
             prompt: this.prompt,
             aspect_ratio: this.aspect_ratio,

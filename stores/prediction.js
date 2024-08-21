@@ -10,19 +10,32 @@ export const usePredictionStore = defineStore('predictionStore', {
     outputs: useLocalStorage('reflux-outputs', [])
   }),
   actions: {
-    async createBatch({ replicate_api_token, versions, input }) {
+    async createBatch({ replicate_api_token, versions, num_outputs, input }) {
       try {
         const predictions = await Promise.all(
-          versions.map((version) =>
-            $fetch('/api/prediction', {
-              method: 'POST',
-              body: {
-                replicate_api_token,
-                version,
-                input
-              }
-            })
-          )
+          // Use versions to create 1 image / version
+          versions.length > 1
+            ? versions.map((version) =>
+                $fetch('/api/prediction', {
+                  method: 'POST',
+                  body: {
+                    replicate_api_token,
+                    version,
+                    input
+                  }
+                })
+              )
+            : // Use num_outputs if only one version was selected
+              Array.from(Array(num_outputs).keys()).map(() =>
+                $fetch('/api/prediction', {
+                  method: 'POST',
+                  body: {
+                    replicate_api_token,
+                    version: versions[0],
+                    input
+                  }
+                })
+              )
         )
 
         const dotSpacing = 20 // Match the value in Canvas.vue
