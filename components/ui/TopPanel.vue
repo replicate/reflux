@@ -7,14 +7,29 @@
     span.animate-text
       | Re
       span.plicate plicate
-      span.font-medium Flux
-  u-input.w-64(
-    v-model="replicate_api_token"
-    type="password"
-    icon="i-heroicons-key"
-    placeholder="Replicate API token..."
-    trailing
-  )
+      span.font-medium.inline-block
+        | Flux
+        u-badge.mx-1.mt-1.float-right(
+          class="-rotate-6"
+          color="red"
+          variant="solid"
+        ) Beta
+  .flex.gap-4
+    .font-light.content-center
+      | Replicate 
+      a.underline.underline-offset-4(
+        class="decoration-[0.5px] hover:decoration-2"
+        href="https://replicate.com/account/api-tokens"
+        target="_new"
+      ) API token
+      | :
+    u-input.w-64(
+      v-model="replicate_api_token"
+      type="password"
+      icon="i-heroicons-key"
+      placeholder="Replicate API token..."
+      trailing
+    )
 </template>
 
 <script>

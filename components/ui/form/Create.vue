@@ -151,11 +151,18 @@
   //- Submit
   u-button(
     @click="submit"
-    :disabled="loading"
+    :disabled="loading || !replicate_api_token"
     :loading="loading"
     size="xl"
     block
   ) Create
+
+  u-alert(
+    v-if="!replicate_api_token"
+    color="primary"
+    variant="soft"
+    description="Please add your Replicate API token in the top right."
+  )
 </template>
 
 <script>

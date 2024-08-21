@@ -20,7 +20,7 @@ export default defineNuxtConfig({
       title: 'ReFlux',
       link: [
         { rel: 'canonical', href: 'https://reflux.vercel.app/' },
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.png' }
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
       ],
       meta: [
         { hid: 'charset', charset: 'utf-8' },

@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <g transform="translate(50,50) scale(0.7)">
-    <path d="M-35.5,35 V-35 H4 C15,
-    -35 25,-26 25,-15 C25,-4 15,5 4,5 H-15.5 V35 Z M-15.5,-15 V-15 H4 C7,
-    -15 9,-13 9,-10 C9,-7 7,-5 4,-5 H-15.5 Z" fill="#ebb305"/>
-    <path d="M15.5,-35 V5 H35.5 V15 H15.5 V35 H5.5 V-35 Z" fill="black"/>
-  </g>
-</svg>

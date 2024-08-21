@@ -17,12 +17,14 @@ export default {
         label: 'Create',
         icon: 'i-heroicons-paint-brush',
         slot: 'create'
-      },
+      }
+      /*
       {
         label: 'Finetune',
         icon: 'i-heroicons-cog-6-tooth',
         slot: 'finetune'
       }
+      */
     ]
   })
 }
