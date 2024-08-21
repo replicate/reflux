@@ -6,7 +6,8 @@ export default defineEventHandler(async (event) => {
       method: 'QUERY',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'text/plain'
+        'Content-Type': 'text/plain',
+        'User-Agent': 'ReFlux/1.0'
       },
       body: q
     })

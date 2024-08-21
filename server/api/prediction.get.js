@@ -7,7 +7,8 @@ export default defineEventHandler(async (event) => {
       {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
+          'User-Agent': 'ReFlux/1.0'
         }
       }
     )

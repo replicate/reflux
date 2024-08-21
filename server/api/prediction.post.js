@@ -5,7 +5,8 @@ export default defineEventHandler(async (event) => {
     const result = await fetch('https://api.replicate.com/v1/predictions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${replicate_api_token}`
+        Authorization: `Bearer ${replicate_api_token}`,
+        'User-Agent': 'ReFlux/1.0'
       },
       body: JSON.stringify({
         version,
