@@ -1,5 +1,5 @@
 <template lang="pug">
-.canvas-container(
+.canvas-container.overscroll-x-none(
   @mousedown="startDrag"
   @mouseup="stopDrag"
   @mousemove="drag"
