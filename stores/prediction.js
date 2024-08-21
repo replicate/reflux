@@ -32,7 +32,10 @@ export const usePredictionStore = defineStore('predictionStore', {
                   body: {
                     replicate_api_token,
                     version: versions[0],
-                    input
+                    input: {
+                      ...input,
+                      seed: Math.floor(Math.random() * 1000) // must be randomized
+                    }
                   }
                 })
               )
