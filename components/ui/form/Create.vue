@@ -150,6 +150,7 @@
       )
   //- Submit
   u-button(
+    v-if="replicate_api_token"
     @click="submit"
     :disabled="loading || !replicate_api_token"
     :loading="loading"
@@ -157,10 +158,10 @@
     block
   ) Create
 
-  u-alert(
+  u-alert.dark(
     v-if="!replicate_api_token"
     color="primary"
-    variant="soft"
+    variant="solid"
     description="Please add your Replicate API token in the top right."
   )
 </template>
