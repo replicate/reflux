@@ -90,13 +90,17 @@ export default {
     const tool = useLocalStorage('reflux-tool', 'V')
 
     onKeyStroke(['v', 'V'], (e) => {
-      e.preventDefault()
-      tool.value = 'V'
+      if (!['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        tool.value = 'V'
+      }
     })
 
     onKeyStroke(['h', 'H'], (e) => {
-      e.preventDefault()
-      tool.value = 'H'
+      if (!['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        tool.value = 'H'
+      }
     })
 
     return {
