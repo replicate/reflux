@@ -1,6 +1,6 @@
 <template lang="pug">
-.flex.flex-row.items-center.w-full.h-14.border-b.px-2
-  .flex-grow.flex.items-center.font-thin.text-3xl
+.flex.flex-row.items-center.w-full.h-14.border-b
+  .flex.items-center.w-80.px-2.font-thin.text-3xl
     a(
       href="https://replicate.com/?utm_source=project&utm_campaign=reflux"
       target="_new"
@@ -18,7 +18,46 @@
           color="red"
           variant="solid"
         ) Beta
-  .flex.gap-2
+
+  //- Control buttons
+  .flex-grow.flex.gap-2
+    u-button(
+      @click="tool = 'V'"
+      :color="tool === 'V' ? 'black' : 'white'"
+      icon="i-heroicons-cursor-arrow-rays"
+      size="xs"
+    )
+      | Pointer
+      u-kbd.ml-1 V
+    u-button(
+      @click="tool = 'H'"
+      :color="tool === 'H' ? 'black' : 'white'"
+      icon="i-heroicons-hand-raised"
+      size="xs"
+    )
+      | Drag
+      u-kbd.ml-1 H
+    u-button(
+      v-if="false"
+      @click=""
+      color="white"
+      icon="i-heroicons-pencil"
+      size="xs"
+    )
+      | Sketch
+      u-kbd.ml-1 S
+    u-button(
+      v-if="false"
+      @click=""
+      color="white"
+      icon="i-heroicons-chat-bubble-bottom-center-text"
+      size="xs"
+    )
+      | Text
+      u-kbd.ml-1 T
+
+  //- Right hand stuff
+  .flex.gap-2.px-2
     .text-sm.font-light.content-center
       | Replicate 
       a.underline.underline-offset-4(
@@ -43,13 +82,28 @@
 </template>
 
 <script>
-import { useLocalStorage } from '@vueuse/core'
+import { useLocalStorage, onKeyStroke } from '@vueuse/core'
 
 export default {
   name: 'UiTopPanel',
-  setup: () => ({
-    replicate_api_token: useLocalStorage('reflux-replicate-api-token', null)
-  }),
+  setup: () => {
+    const tool = useLocalStorage('reflux-tool', 'V')
+
+    onKeyStroke(['v', 'V'], (e) => {
+      e.preventDefault()
+      tool.value = 'V'
+    })
+
+    onKeyStroke(['h', 'H'], (e) => {
+      e.preventDefault()
+      tool.value = 'H'
+    })
+
+    return {
+      tool,
+      replicate_api_token: useLocalStorage('reflux-replicate-api-token', null)
+    }
+  },
   methods: {
     openCode() {
       window.open('https://github.com/replicate/reflux', '_blank').focus()

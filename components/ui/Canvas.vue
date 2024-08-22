@@ -1,8 +1,9 @@
 <template lang="pug">
 .canvas-container.overscroll-x-none(
-  @mousedown="startDrag"
-  @mouseup="stopDrag"
-  @mousemove="drag"
+  :class="{ 'cursor-default': tool === 'V', 'cursor-grab': tool === 'H' }"
+  @mousedown="handleMouseDown"
+  @mousemove="handleMouseMove"
+  @mouseup="handleMouseUp"
   @wheel="handleWheel"
   @touchstart="handleTouchStart"
   @touchmove="handleTouchMove"
@@ -18,7 +19,9 @@
       v-for="output in outputs"
       :key="output.id"
       :style="imageStyle(output)"
-      @mousedown.stop="startImageDrag(output, $event)"
+      :class="{ 'pointer-events-none': tool === 'H' }"
+      @mousedown.stop="startSelection"
+      :data-id="output.id"
     )
       u-tooltip(:text="output.metadata.name")
         template(v-if="output.status === 'succeeded'")
@@ -64,6 +67,7 @@
           v-else
           :ui="{ rounded: 'rounded-none' }"
         )
+  .selection-box(v-if="isSelecting" :style="selectionBoxStyle")
 </template>
 
 <script>
@@ -76,6 +80,7 @@ export default {
     const predictionStore = usePredictionStore()
     const outputs = shallowRef(predictionStore.outputs)
 
+    const tool = useLocalStorage('reflux-tool', 'V')
     const canvasState = useLocalStorage('reflux-canvas-state', {
       scale: 1,
       offsetX: 0,
@@ -96,7 +101,8 @@ export default {
 
     return {
       outputs,
-      canvasState
+      canvasState,
+      tool
     }
   },
   data() {
@@ -116,7 +122,11 @@ export default {
       imageOffsetX: 0,
       imageOffsetY: 0,
       loadedImages: {},
-      slideover_open: false
+      slideover_open: false,
+      isSelecting: false,
+      selectionStart: { x: 0, y: 0 },
+      selectionEnd: { x: 0, y: 0 },
+      selectedImages: []
     }
   },
   computed: {
@@ -159,27 +169,125 @@ export default {
         }
       }
       return groups
+    },
+    selectionBoxStyle() {
+      const left = Math.min(this.selectionStart.x, this.selectionEnd.x)
+      const top = Math.min(this.selectionStart.y, this.selectionEnd.y)
+      const width = Math.abs(this.selectionEnd.x - this.selectionStart.x)
+      const height = Math.abs(this.selectionEnd.y - this.selectionStart.y)
+      return {
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`
+      }
     }
   },
   methods: {
     ...mapActions(usePredictionStore, ['updateOutputPosition', 'removeOutput']),
+    handleMouseDown(e) {
+      if (this.tool === 'V') {
+        this.startSelection(e)
+      } else if (this.tool === 'H') {
+        this.startDrag(e)
+      }
+    },
+    handleMouseMove(e) {
+      if (this.tool === 'V') {
+        this.updateSelection(e)
+      } else if (this.tool === 'H' && this.isDragging) {
+        this.drag(e)
+      }
+    },
+    handleMouseUp(e) {
+      if (this.tool === 'V') {
+        this.endSelection()
+      } else if (this.tool === 'H') {
+        this.stopDrag()
+      }
+    },
+    startSelection(e) {
+      if (this.tool !== 'V') return
+
+      if (e.target.closest('.image')) {
+        const output = this.outputs.find(
+          (o) => o.id === e.target.closest('.image').dataset.id
+        )
+        if (e.ctrlKey || e.metaKey) {
+          // Toggle selection
+          const index = this.selectedImages.findIndex(
+            (img) => img.id === output.id
+          )
+          if (index === -1) {
+            this.selectedImages.push(output)
+          } else {
+            this.selectedImages.splice(index, 1)
+          }
+        } else {
+          // Start dragging the image(s)
+          if (!this.selectedImages.some((img) => img.id === output.id)) {
+            this.selectedImages = [output]
+          }
+          this.startImageDrag(output, e)
+        }
+      } else {
+        // Start selection box
+        this.isSelecting = true
+        this.selectionStart = { x: e.clientX, y: e.clientY }
+        this.selectionEnd = { x: e.clientX, y: e.clientY }
+        if (!e.ctrlKey && !e.metaKey) {
+          this.selectedImages = []
+        }
+      }
+    },
+    updateSelection(e) {
+      if (this.isSelecting) {
+        this.selectionEnd = { x: e.clientX, y: e.clientY }
+        this.updateSelectedImages()
+      } else if (this.draggingImage) {
+        this.drag(e)
+      }
+    },
+    updateSelectedImages() {
+      const left = Math.min(this.selectionStart.x, this.selectionEnd.x)
+      const top = Math.min(this.selectionStart.y, this.selectionEnd.y)
+      const right = Math.max(this.selectionStart.x, this.selectionEnd.x)
+      const bottom = Math.max(this.selectionStart.y, this.selectionEnd.y)
+
+      this.selectedImages = this.outputs.filter((output) => {
+        const rect = this.$el
+          .querySelector(`[data-id="${output.id}"]`)
+          .getBoundingClientRect()
+        return (
+          rect.left < right &&
+          rect.right > left &&
+          rect.top < bottom &&
+          rect.bottom > top
+        )
+      })
+    },
+    endSelection() {
+      if (this.isSelecting) {
+        this.isSelecting = false
+      }
+      this.stopDrag()
+    },
     startDrag(e) {
       this.isDragging = true
       this.lastX = e.clientX
       this.lastY = e.clientY
     },
-    stopDrag() {
-      this.isDragging = false
-      this.draggingImage = null
-    },
     drag(e) {
-      if (this.isDragging) {
+      if (this.tool === 'H' && this.isDragging) {
         const dx = (e.clientX - this.lastX) / this.scale
         const dy = (e.clientY - this.lastY) / this.scale
         this.offsetX += dx
         this.offsetY += dy
         this.lastX = e.clientX
         this.lastY = e.clientY
+
+        this.canvasState.offsetX = this.offsetX
+        this.canvasState.offsetY = this.offsetY
       } else if (this.draggingImage) {
         const canvasRect = this.$el.getBoundingClientRect()
         let newX =
@@ -193,16 +301,24 @@ export default {
         newX = Math.round(newX / this.dotSpacing) * this.dotSpacing
         newY = Math.round(newY / this.dotSpacing) * this.dotSpacing
 
-        // Update the position in the store
-        this.updateOutputPosition({
-          id: this.draggingImage.id,
-          x: newX,
-          y: newY
-        })
+        const dx = newX - this.draggingImage.metadata.x
+        const dy = newY - this.draggingImage.metadata.y
 
-        // Update the position locally
-        this.draggingImage.metadata.x = newX
-        this.draggingImage.metadata.y = newY
+        this.selectedImages.forEach((image) => {
+          const updatedX = image.metadata.x + dx
+          const updatedY = image.metadata.y + dy
+
+          // Update the position in the store
+          this.updateOutputPosition({
+            id: image.id,
+            x: updatedX,
+            y: updatedY
+          })
+
+          // Update the position locally
+          image.metadata.x = updatedX
+          image.metadata.y = updatedY
+        })
 
         this.canvasState.offsetX = this.offsetX
         this.canvasState.offsetY = this.offsetY
@@ -265,13 +381,17 @@ export default {
         Math.round(output.metadata.x / this.dotSpacing) * this.dotSpacing
       const snappedY =
         Math.round(output.metadata.y / this.dotSpacing) * this.dotSpacing
+      const isSelected = this.selectedImages.some((img) => img.id === output.id)
+      const borderWidth = 2 // This should match the border width in the style
+
       return {
         position: 'absolute',
         left: `${snappedX}px`,
         top: `${snappedY}px`,
         width: `${width}px`,
         height: `${height}px`,
-        cursor: 'move'
+        cursor: this.tool === 'V' ? 'move' : 'default',
+        outline: isSelected ? `${borderWidth}px solid #ebb305` : 'none'
       }
     },
     getImageDimensions(aspectRatio) {
@@ -303,7 +423,7 @@ export default {
         // Pinch zoom on trackpad
         this.zoom(e)
       } else {
-        // Normal wheel event (scroll)
+        // Pan in both modes
         this.pan(e)
       }
     },
@@ -350,6 +470,10 @@ export default {
 
       this.canvasState.offsetX = this.offsetX
       this.canvasState.offsetY = this.offsetY
+    },
+    stopDrag() {
+      this.isDragging = false
+      this.draggingImage = null
     }
   }
 }
@@ -357,19 +481,20 @@ export default {
 
 <style lang="stylus" scoped>
 .canvas-container
-  width: 100%
-  height: 100%
-  overflow: hidden
-  cursor: move
+  width 100%
+  height 100%
+  overflow hidden
+  cursor move
+  background #f8f8f8
 
   .canvas
-    width: 100%
-    height: 100%
-    transform-origin: 0 0
+    width 100%
+    height 100%
+    transform-origin 0 0
 
   .image
-    position: absolute
-    user-select: none
+    position absolute
+    user-select none
 
     .inline-flex
       display block !important
@@ -383,10 +508,22 @@ export default {
       display none
 
     :deep(img)
-      width: 100%
-      height: 100%
-      object-fit: cover
+      width 100%
+      height 100%
+      object-fit cover
 
 .dot-group
-  position: absolute
+  position absolute
+
+.selection-box
+  position absolute
+  border 1px solid #ebb305
+  background-color rgba(235, 179, 5, 0.1)
+  pointer-events none
+
+.canvas-container[class*='cursor-grab']
+  .image
+    &:hover
+      :deep(.buttons)
+        display none
 </style>
