@@ -15,6 +15,11 @@ class Flux {
     return item ? item.version : null
   }
 
+  getTriggerByVersion(version) {
+    const item = this.version_options.value.find((i) => i.version === version)
+    return item ? item.trigger : null
+  }
+
   setVersionOptions(val) {
     this.version_options.value = val
   }

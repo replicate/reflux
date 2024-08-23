@@ -14,6 +14,28 @@
       multiple
       required
     )
+  u-form-group(
+    v-if="trigger_words.length > 0"
+    label="Trigger words"
+  )
+    .flex.flex-col.gap-y-2
+      .flex.items-center(
+        v-for="(trigger, i) in trigger_words"
+        :key="`trigger-word-${i}`"
+      )
+        .text-xs.flex-grow {{ trigger.name }}:
+        .flex.gap-x-2
+          u-badge(
+            color="gray"
+            size="xs"
+          ) {{ trigger.word }}
+          u-button(
+            @click="versions = versions.filter((v) => v !== trigger.version)"
+            color="white"
+            icon="i-heroicons-trash"
+            size="xs"
+            square
+          )
   //- Prompt
   u-form-group(
     label="Prompt"
@@ -204,6 +226,15 @@ export default {
     ],
     output_format_options: ['webp', 'jpg', 'png']
   }),
+  computed: {
+    trigger_words() {
+      return this.versions.map((version) => ({
+        version,
+        name: flux.getNameByVersion(version),
+        word: flux.getTriggerByVersion(version)
+      }))
+    }
+  },
   watch: {
     replicate_api_token: {
       immediate: true,
@@ -211,9 +242,7 @@ export default {
         if (!token) return
 
         try {
-          const versions = await $fetch(
-            `/api/search?q=flux&token=${this.replicate_api_token}`
-          )
+          const versions = await $fetch('/api/search')
           // Dedupe by version key and sort alphabetically by name
           const versionMap = new Map(
             [...this.version_options, ...versions].map((v) => [v.version, v])
