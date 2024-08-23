@@ -72,7 +72,7 @@
 
 <script>
 import { mapState, mapActions } from 'pinia'
-import { useLocalStorage } from '@vueuse/core'
+import { useLocalStorage, onKeyStroke } from '@vueuse/core'
 
 export default {
   name: 'UiCanvas',
@@ -85,6 +85,20 @@ export default {
       scale: 1,
       offsetX: 0,
       offsetY: 0
+    })
+
+    onKeyStroke(['v', 'V'], (e) => {
+      if (!['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        tool.value = 'V'
+      }
+    })
+
+    onKeyStroke(['h', 'H'], (e) => {
+      if (!['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        tool.value = 'H'
+      }
     })
 
     const updateOutputs = () => {
@@ -185,6 +199,16 @@ export default {
   },
   methods: {
     ...mapActions(usePredictionStore, ['updateOutputPosition', 'removeOutput']),
+    handleKeyDown(e) {
+      if (
+        e.key === 'Backspace' &&
+        this.selectedImages.length > 0 &&
+        !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)
+      ) {
+        e.preventDefault()
+        this.deleteSelectedImages()
+      }
+    },
     handleMouseDown(e) {
       if (this.tool === 'V') {
         this.startSelection(e)
@@ -205,6 +229,50 @@ export default {
       } else if (this.tool === 'H') {
         this.stopDrag()
       }
+    },
+    handleWheel(e) {
+      if (e.ctrlKey) {
+        // Pinch zoom on trackpad
+        this.zoom(e)
+      } else {
+        // Pan in both modes
+        this.pan(e)
+      }
+    },
+    handleTouchStart(e) {
+      if (e.touches.length === 2) {
+        // Two-finger touch
+        this.lastTouchDistance = this.getTouchDistance(e.touches)
+      } else {
+        // Single touch (treat as drag start)
+        this.startDrag(e.touches[0])
+      }
+    },
+    handleTouchMove(e) {
+      if (e.touches.length === 2) {
+        // Two-finger touch
+        const currentDistance = this.getTouchDistance(e.touches)
+        const scaleFactor = currentDistance / this.lastTouchDistance
+        this.zoom({
+          deltaY: scaleFactor > 1 ? -1 : 1,
+          clientX: e.touches[0].clientX,
+          clientY: e.touches[0].clientY
+        })
+        this.lastTouchDistance = currentDistance
+      } else if (this.isDragging) {
+        // Single touch (treat as drag)
+        this.drag(e.touches[0])
+      }
+    },
+    handleTouchEnd() {
+      this.stopDrag()
+      this.lastTouchDistance = null
+    },
+    getTouchDistance(touches) {
+      return Math.hypot(
+        touches[0].clientX - touches[1].clientX,
+        touches[0].clientY - touches[1].clientY
+      )
     },
     startSelection(e) {
       if (this.tool !== 'V') return
@@ -276,6 +344,17 @@ export default {
       this.isDragging = true
       this.lastX = e.clientX
       this.lastY = e.clientY
+    },
+    startImageDrag(output, event) {
+      this.draggingImage = output
+      const rect = event.target.getBoundingClientRect()
+      this.imageOffsetX = event.clientX - rect.left
+      this.imageOffsetY = event.clientY - rect.top
+      event.preventDefault()
+    },
+    stopDrag() {
+      this.isDragging = false
+      this.draggingImage = null
     },
     drag(e) {
       if (this.tool === 'H' && this.isDragging) {
@@ -354,6 +433,15 @@ export default {
       this.canvasState.offsetX = this.offsetX
       this.canvasState.offsetY = this.offsetY
     },
+    pan(e) {
+      const dx = e.deltaX / this.scale
+      const dy = e.deltaY / this.scale
+      this.offsetX -= dx
+      this.offsetY -= dy
+
+      this.canvasState.offsetX = this.offsetX
+      this.canvasState.offsetY = this.offsetY
+    },
     dotGroupStyle(group) {
       const size = this.dotSize / this.scale
       const groupSize = 20 // Same as in visibleDotGroups
@@ -376,7 +464,8 @@ export default {
       this.loadedImages[id] = true
     },
     imageStyle(output) {
-      const [width, height] = this.getImageDimensions(output.input.aspect_ratio)
+      const aspectRatio = output.input?.aspect_ratio || '1:1' // Default to 1:1 if aspect_ratio is not available
+      const [width, height] = this.getImageDimensions(aspectRatio)
       const snappedX =
         Math.round(output.metadata.x / this.dotSpacing) * this.dotSpacing
       const snappedY =
@@ -399,13 +488,6 @@ export default {
       const baseSize = 300 // Adjust this value to change the overall size of the images
       return [baseSize * (width / height), baseSize]
     },
-    startImageDrag(output, event) {
-      this.draggingImage = output
-      const rect = event.target.getBoundingClientRect()
-      this.imageOffsetX = event.clientX - rect.left
-      this.imageOffsetY = event.clientY - rect.top
-      event.preventDefault()
-    },
     downloadImage(output) {
       if (output.output && output.output[0]) {
         const link = document.createElement('a')
@@ -418,63 +500,18 @@ export default {
         document.body.removeChild(link)
       }
     },
-    handleWheel(e) {
-      if (e.ctrlKey) {
-        // Pinch zoom on trackpad
-        this.zoom(e)
-      } else {
-        // Pan in both modes
-        this.pan(e)
-      }
-    },
-    handleTouchStart(e) {
-      if (e.touches.length === 2) {
-        // Two-finger touch
-        this.lastTouchDistance = this.getTouchDistance(e.touches)
-      } else {
-        // Single touch (treat as drag start)
-        this.startDrag(e.touches[0])
-      }
-    },
-    handleTouchMove(e) {
-      if (e.touches.length === 2) {
-        // Two-finger touch
-        const currentDistance = this.getTouchDistance(e.touches)
-        const scaleFactor = currentDistance / this.lastTouchDistance
-        this.zoom({
-          deltaY: scaleFactor > 1 ? -1 : 1,
-          clientX: e.touches[0].clientX,
-          clientY: e.touches[0].clientY
-        })
-        this.lastTouchDistance = currentDistance
-      } else if (this.isDragging) {
-        // Single touch (treat as drag)
-        this.drag(e.touches[0])
-      }
-    },
-    handleTouchEnd() {
-      this.stopDrag()
-      this.lastTouchDistance = null
-    },
-    getTouchDistance(touches) {
-      return Math.hypot(
-        touches[0].clientX - touches[1].clientX,
-        touches[0].clientY - touches[1].clientY
-      )
-    },
-    pan(e) {
-      const dx = e.deltaX / this.scale
-      const dy = e.deltaY / this.scale
-      this.offsetX -= dx
-      this.offsetY -= dy
-
-      this.canvasState.offsetX = this.offsetX
-      this.canvasState.offsetY = this.offsetY
-    },
-    stopDrag() {
-      this.isDragging = false
-      this.draggingImage = null
+    deleteSelectedImages() {
+      this.selectedImages.forEach((image) => {
+        this.removeOutput(image.id)
+      })
+      this.selectedImages = []
     }
+  },
+  mounted() {
+    window.addEventListener('keydown', this.handleKeyDown)
+  },
+  beforeUnmount() {
+    window.removeEventListener('keydown', this.handleKeyDown)
   }
 }
 </script>

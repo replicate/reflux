@@ -169,7 +169,11 @@ export const usePredictionStore = defineStore('predictionStore', {
       }
     },
     removeOutput(id) {
-      this.outputs = this.outputs.filter((output) => output.id !== id)
+      if (Array.isArray(id)) {
+        this.outputs = this.outputs.filter((output) => !id.includes(output.id))
+      } else {
+        this.outputs = this.outputs.filter((output) => output.id !== id)
+      }
     }
   }
 })
