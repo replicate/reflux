@@ -1,6 +1,6 @@
 <template lang="pug">
 .canvas-container.overscroll-x-none(
-  :class="{ 'cursor-default': tool === 'V', 'cursor-grab': tool === 'H' }"
+  :class="containerClasses"
   @mousedown="handleMouseDown"
   @mousemove="handleMouseMove"
   @mouseup="handleMouseUp"
@@ -145,6 +145,13 @@ export default {
   },
   computed: {
     ...mapState(usePredictionStore, ['outputs']),
+    containerClasses() {
+      return {
+        'cursor-default': this.tool === 'V',
+        'cursor-grab': this.tool === 'H' && !this.isDragging,
+        'cursor-grabbing': this.tool === 'H' && this.isDragging
+      }
+    },
     canvasStyle() {
       return {
         transform: `scale(${this.scale}) translate(${this.offsetX}px, ${this.offsetY}px)`
@@ -479,7 +486,7 @@ export default {
         top: `${snappedY}px`,
         width: `${width}px`,
         height: `${height}px`,
-        cursor: this.tool === 'V' ? 'move' : 'default',
+        cursor: this.tool === 'V' ? 'move' : 'auto',
         outline: isSelected ? `${borderWidth}px solid #ebb305` : 'none'
       }
     },
@@ -521,7 +528,6 @@ export default {
   width 100%
   height 100%
   overflow hidden
-  cursor move
   background #f8f8f8
 
   .canvas
