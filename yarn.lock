@@ -2544,6 +2544,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"all-the-public-replicate-models@npm:^1.303.0":
+  version: 1.303.0
+  resolution: "all-the-public-replicate-models@npm:1.303.0"
+  bin:
+    all-the-public-replicate-models: cli.js
+    all-the-replicate-models: cli.js
+    replicate-models: cli.js
+  checksum: 526978cf17a63290022c704a8810818c129c89eb5e934f69fa4e9e219cb5c4d005a82c6badf676ff8d42b0fab8a5d777edcf17a2d6d89255213773cc020af1ed
+  languageName: node
+  linkType: hard
+
 "ansi-colors@npm:^4.1.3":
   version: 4.1.3
   resolution: "ansi-colors@npm:4.1.3"
@@ -7523,6 +7534,7 @@ __metadata:
     "@pinia/nuxt": ^0.5.2
     "@vueuse/core": ^10.11.0
     "@vueuse/nuxt": ^10.11.0
+    all-the-public-replicate-models: ^1.303.0
     nuxt: ^3.12.4
     pug: ^3.0.3
     pug-plain-loader: ^1.1.0

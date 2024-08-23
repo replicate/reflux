@@ -223,6 +223,7 @@ export default {
           )
 
           // Persist
+          flux.setVersionOptions([])
           flux.setVersionOptions(version_options)
         } catch (e) {
           console.log('--- (create) error:', e.message)

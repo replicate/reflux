@@ -1,5 +1,8 @@
+import models from 'all-the-public-replicate-models'
+
 export default defineEventHandler(async (event) => {
   try {
+    /*
     const { token, q } = getQuery(event)
 
     const result = await fetch(`https://api.replicate.com/v1/models`, {
@@ -14,9 +17,21 @@ export default defineEventHandler(async (event) => {
 
     const data = await result.json()
 
-    const filtered = data.results
+    const filtered = data.results.filter(
+      (i) =>
+        i?.latest_version?.openapi_schema?.components?.schemas?.TrainingInput
+    )
+      .map((i) => ({
+        name: `${i.owner} / ${i.name}`,
+        version: i?.latest_version?.id
+      }))
+    */
+
+    // Use all-the-public-replicate-models package instead
+    const filtered = models
       .filter(
         (i) =>
+          i?.name.includes('flux') &&
           i?.latest_version?.openapi_schema?.components?.schemas?.TrainingInput
       )
       .map((i) => ({

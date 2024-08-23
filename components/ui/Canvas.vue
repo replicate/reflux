@@ -412,7 +412,7 @@ export default {
     },
     zoom(e) {
       e.preventDefault()
-      const zoomFactor = 0.02
+      const zoomFactor = 0.0075
       const direction = e.deltaY > 0 ? -1 : 1
       const newScale = this.scale * (1 + direction * zoomFactor)
 
