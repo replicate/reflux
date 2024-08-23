@@ -4,6 +4,7 @@
   .flex.flex-1.overflow-hidden
     ui-left-panel
     ui-canvas
+    prediction-poller
 </template>
 
 <script>

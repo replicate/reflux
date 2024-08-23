@@ -237,7 +237,6 @@ export default {
       this.loading = true
       try {
         await this.createBatch({
-          replicate_api_token: this.replicate_api_token,
           versions: this.versions,
           num_outputs: this.num_outputs,
           input: {

@@ -7,89 +7,72 @@ const parseAspectRatio = (aspectRatio) => {
 
 export const usePredictionStore = defineStore('predictionStore', {
   state: () => ({
+    replicate_api_token: useLocalStorage('reflux-replicate-api-token', null),
     outputs: useLocalStorage('reflux-outputs', [])
   }),
   actions: {
-    async createBatch({ replicate_api_token, versions, num_outputs, input }) {
+    async createBatch({ versions, num_outputs, input }) {
       try {
         const predictions = await Promise.all(
-          // Use versions to create 1 image / version
           versions.length > 1
             ? versions.map((version) =>
                 $fetch('/api/prediction', {
                   method: 'POST',
                   body: {
-                    replicate_api_token,
+                    replicate_api_token: this.replicate_api_token,
                     version,
                     input
                   }
                 })
               )
-            : // Use num_outputs if only one version was selected
-              Array.from(Array(num_outputs).keys()).map(() =>
+            : Array.from(Array(num_outputs).keys()).map(() =>
                 $fetch('/api/prediction', {
                   method: 'POST',
                   body: {
-                    replicate_api_token,
+                    replicate_api_token: this.replicate_api_token,
                     version: versions[0],
                     input: {
                       ...input,
-                      seed: Math.floor(Math.random() * 1000) // must be randomized
+                      seed: Math.floor(Math.random() * 1000)
                     }
                   }
                 })
               )
         )
 
-        const dotSpacing = 20 // Match the value in Canvas.vue
-        const baseSize = 300 // This should match the baseSize in Canvas.vue
-        const centerX =
-          Math.round(window.innerWidth / 2 / dotSpacing) * dotSpacing
-        const centerY =
-          Math.round(window.innerHeight / 2 / dotSpacing) * dotSpacing
+        const dotSpacing = 20
+        const baseSize = 300
+        const aspectRatio = parseAspectRatio(input.aspect_ratio)
+        const width = Math.round(
+          baseSize * (aspectRatio.width / aspectRatio.height)
+        )
+        const height = baseSize
 
-        const gridSize = Math.ceil(Math.sqrt(predictions.length))
+        // Calculate the bounding box for all new images
+        const totalWidth =
+          Math.ceil(Math.sqrt(predictions.length)) * (width + dotSpacing)
+        const totalHeight =
+          Math.ceil(Math.sqrt(predictions.length)) * (height + dotSpacing)
+
+        // Find the lowest y-coordinate of existing images
+        const lowestY = this.outputs.reduce(
+          (max, output) =>
+            Math.max(max, output.metadata.y + output.metadata.height),
+          0
+        )
+
+        // Calculate the starting position for the new images
+        const startX =
+          Math.round(window.innerWidth / 2 / dotSpacing) * dotSpacing -
+          totalWidth / 2
+        const startY = lowestY + dotSpacing
+
         let currentRow = 0
         let currentCol = 0
 
-        const placedImages = []
-
-        predictions.forEach((prediction, index) => {
-          const aspectRatio = parseAspectRatio(input.aspect_ratio)
-          const width = Math.round(
-            baseSize * (aspectRatio.width / aspectRatio.height)
-          )
-          const height = baseSize
-
-          let x, y
-          let overlap = true
-
-          while (overlap) {
-            x =
-              centerX +
-              (currentCol - Math.floor(gridSize / 2)) * (width + dotSpacing)
-            y =
-              centerY +
-              (currentRow - Math.floor(gridSize / 2)) * (height + dotSpacing)
-
-            overlap = placedImages.some(
-              (img) =>
-                x < img.x + img.width + dotSpacing &&
-                x + width + dotSpacing > img.x &&
-                y < img.y + img.height + dotSpacing &&
-                y + height + dotSpacing > img.y
-            )
-
-            if (overlap) {
-              currentCol++
-              if (currentCol >= gridSize) {
-                currentCol = 0
-                currentRow++
-              }
-            }
-          }
-
-          placedImages.push({ x, y, width, height })
+        predictions.forEach((prediction) => {
+          const x = startX + currentCol * (width + dotSpacing)
+          const y = startY + currentRow * (height + dotSpacing)
 
           this.outputs.push({
             id: prediction.id,
@@ -106,15 +89,10 @@ export const usePredictionStore = defineStore('predictionStore', {
           })
 
           currentCol++
-          if (currentCol >= gridSize) {
+          if (currentCol * (width + dotSpacing) >= totalWidth) {
             currentCol = 0
             currentRow++
           }
-        })
-
-        // Start polling for each prediction
-        predictions.forEach((prediction) => {
-          this.pollPrediction(prediction.id, replicate_api_token)
         })
 
         return predictions
@@ -122,42 +100,30 @@ export const usePredictionStore = defineStore('predictionStore', {
         console.log('--- (stores/prediction) error:', e.message)
       }
     },
-    async pollPrediction(prediction_id, replicate_api_token) {
-      const pollInterval = 2000 // Poll every 2 second
-      const maxAttempts = 60 // Max 1 minute of polling
+    async pollPrediction(prediction_id) {
+      try {
+        const result = await $fetch(
+          `/api/prediction?id=${prediction_id}&token=${this.replicate_api_token}`
+        )
 
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        try {
-          const result = await $fetch(
-            `/api/prediction?id=${prediction_id}&token=${replicate_api_token}`
-          )
-
-          // Update the corresponding output in the state
-          const index = this.outputs.findIndex(
-            (output) => output.id === prediction_id
-          )
-          if (index !== -1) {
-            this.outputs[index] = {
-              ...this.outputs[index],
-              id: prediction_id,
-              input: result.input,
-              status: result.status,
-              output: result.output
-            }
+        // Update the corresponding output in the state
+        const index = this.outputs.findIndex(
+          (output) => output.id === prediction_id
+        )
+        if (index !== -1) {
+          this.outputs[index] = {
+            ...this.outputs[index],
+            id: prediction_id,
+            input: result.input,
+            status: result.status,
+            output: result.output
           }
-
-          if (result.status === 'succeeded' || result.status === 'failed') {
-            break // Stop polling if the prediction is complete or failed
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, pollInterval))
-        } catch (e) {
-          console.log(
-            `--- (stores/prediction) error polling prediction ${prediction_id}:`,
-            e.message
-          )
-          break
         }
+      } catch (e) {
+        console.log(
+          `--- (stores/prediction) error polling prediction ${prediction_id}:`,
+          e.message
+        )
       }
     },
     updateOutputPosition({ id, x, y }) {
@@ -175,5 +141,11 @@ export const usePredictionStore = defineStore('predictionStore', {
         this.outputs = this.outputs.filter((output) => output.id !== id)
       }
     }
+  },
+  getters: {
+    incompleteOutputs: (state) =>
+      state.outputs.filter(
+        (output) => output.status !== 'succeeded' && output.status !== 'failed'
+      )
   }
 })
