@@ -68,6 +68,10 @@
           :ui="{ rounded: 'rounded-none' }"
         )
   .selection-box(v-if="isSelecting" :style="selectionBoxStyle")
+  .selection-bounding-box(
+    v-if="selectedImages.length > 1"
+    :style="selectedImagesBoundingBox"
+  )
 </template>
 
 <script>
@@ -125,6 +129,7 @@ export default {
       offsetX: this.canvasState.offsetX,
       offsetY: this.canvasState.offsetY,
       isDragging: false,
+      draggingBoundingBox: false,
       lastTouchDistance: null,
       lastX: 0,
       lastY: 0,
@@ -201,6 +206,35 @@ export default {
         top: `${top}px`,
         width: `${width}px`,
         height: `${height}px`
+      }
+    },
+    selectedImagesBoundingBox() {
+      if (this.selectedImages.length === 0) return null
+
+      const containerRect = this.$el.getBoundingClientRect()
+      let minX = Infinity
+      let minY = Infinity
+      let maxX = -Infinity
+      let maxY = -Infinity
+
+      this.selectedImages.forEach((image) => {
+        const { x, y, width, height } = image.metadata
+        const scaledX = x * this.scale + this.offsetX * this.scale
+        const scaledY = y * this.scale + this.offsetY * this.scale
+        const scaledWidth = width * this.scale
+        const scaledHeight = height * this.scale
+
+        minX = Math.min(minX, scaledX)
+        minY = Math.min(minY, scaledY)
+        maxX = Math.max(maxX, scaledX + scaledWidth)
+        maxY = Math.max(maxY, scaledY + scaledHeight)
+      })
+
+      return {
+        left: `${minX + containerRect.left}px`,
+        top: `${minY + containerRect.top}px`,
+        width: `${maxX - minX}px`,
+        height: `${maxY - minY}px`
       }
     }
   },
@@ -284,7 +318,11 @@ export default {
     startSelection(e) {
       if (this.tool !== 'V') return
 
-      if (e.target.closest('.image')) {
+      const boundingBox = this.$el.querySelector('.selection-bounding-box')
+      if (boundingBox && boundingBox.contains(e.target)) {
+        this.draggingBoundingBox = true
+        this.startImageDrag(this.selectedImages[0], e)
+      } else if (e.target.closest('.image')) {
         const output = this.outputs.find(
           (o) => o.id === e.target.closest('.image').dataset.id
         )
@@ -319,7 +357,7 @@ export default {
       if (this.isSelecting) {
         this.selectionEnd = { x: e.clientX, y: e.clientY }
         this.updateSelectedImages()
-      } else if (this.draggingImage) {
+      } else if (this.draggingImage || this.draggingBoundingBox) {
         this.drag(e)
       }
     },
@@ -346,6 +384,7 @@ export default {
         this.isSelecting = false
       }
       this.stopDrag()
+      this.draggingBoundingBox = false
     },
     startDrag(e) {
       this.isDragging = true
@@ -354,9 +393,17 @@ export default {
     },
     startImageDrag(output, event) {
       this.draggingImage = output
-      const rect = event.target.getBoundingClientRect()
-      this.imageOffsetX = event.clientX - rect.left
-      this.imageOffsetY = event.clientY - rect.top
+      const canvasRect = this.$el.getBoundingClientRect()
+      this.imageOffsetX =
+        event.clientX -
+        (output.metadata.x * this.scale +
+          this.offsetX * this.scale +
+          canvasRect.left)
+      this.imageOffsetY =
+        event.clientY -
+        (output.metadata.y * this.scale +
+          this.offsetY * this.scale +
+          canvasRect.top)
       event.preventDefault()
     },
     stopDrag() {
@@ -374,13 +421,13 @@ export default {
 
         this.canvasState.offsetX = this.offsetX
         this.canvasState.offsetY = this.offsetY
-      } else if (this.draggingImage) {
+      } else if (this.draggingImage || this.draggingBoundingBox) {
         const canvasRect = this.$el.getBoundingClientRect()
         let newX =
-          (e.clientX - canvasRect.left - this.imageOffsetX) / this.scale -
+          (e.clientX - this.imageOffsetX - canvasRect.left) / this.scale -
           this.offsetX
         let newY =
-          (e.clientY - canvasRect.top - this.imageOffsetY) / this.scale -
+          (e.clientY - this.imageOffsetY - canvasRect.top) / this.scale -
           this.offsetY
 
         // Snap to grid
@@ -405,9 +452,6 @@ export default {
           image.metadata.x = updatedX
           image.metadata.y = updatedY
         })
-
-        this.canvasState.offsetX = this.offsetX
-        this.canvasState.offsetY = this.offsetY
       }
     },
     zoom(e) {
@@ -478,7 +522,7 @@ export default {
       const snappedY =
         Math.round(output.metadata.y / this.dotSpacing) * this.dotSpacing
       const isSelected = this.selectedImages.some((img) => img.id === output.id)
-      const borderWidth = 2 // This should match the border width in the style
+      const borderWidth = 1 // This should match the border width in the style
 
       return {
         position: 'absolute',
@@ -486,7 +530,7 @@ export default {
         top: `${snappedY}px`,
         width: `${width}px`,
         height: `${height}px`,
-        cursor: this.tool === 'V' ? 'move' : 'auto',
+        // cursor: this.tool === 'V' ? 'move' : 'auto',
         outline: isSelected ? `${borderWidth}px solid #ebb305` : 'none'
       }
     },
@@ -544,6 +588,8 @@ export default {
       height 100%
 
     &:hover
+      outline 1px solid #ebb305 !important
+
       :deep(.buttons)
         display flex
 
@@ -563,6 +609,12 @@ export default {
   border 1px solid #ebb305
   background-color rgba(235, 179, 5, 0.1)
   pointer-events none
+
+.selection-bounding-box
+  position absolute
+  outline 1px solid #ebb305
+  pointer-events auto
+  z-index 10
 
 .canvas-container[class*='cursor-grab']
   .image
