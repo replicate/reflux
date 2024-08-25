@@ -219,8 +219,10 @@ export default {
 
       this.selectedImages.forEach((image) => {
         const { x, y, width, height } = image.metadata
-        const scaledX = x * this.scale + this.offsetX * this.scale
-        const scaledY = y * this.scale + this.offsetY * this.scale
+        const snappedX = Math.round(x / this.dotSpacing) * this.dotSpacing
+        const snappedY = Math.round(y / this.dotSpacing) * this.dotSpacing
+        const scaledX = snappedX * this.scale + this.offsetX * this.scale
+        const scaledY = snappedY * this.scale + this.offsetY * this.scale
         const scaledWidth = width * this.scale
         const scaledHeight = height * this.scale
 

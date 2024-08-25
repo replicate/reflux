@@ -63,9 +63,9 @@ export const usePredictionStore = defineStore('predictionStore', {
 
         // Calculate the starting position for the new images
         const startX =
-          Math.round(window.innerWidth / 2 / dotSpacing) * dotSpacing -
-          totalWidth / 2
-        const startY = lowestY + dotSpacing
+          Math.ceil(window.innerWidth / 2 / dotSpacing) * dotSpacing -
+          Math.floor(totalWidth / 2)
+        const startY = Math.ceil(lowestY / dotSpacing) * dotSpacing + dotSpacing
 
         let currentRow = 0
         let currentCol = 0
