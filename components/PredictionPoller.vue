@@ -17,6 +17,7 @@ export default {
     clearInterval() {
       if (this.interval) {
         clearInterval(this.interval)
+        this.interval = null
       }
     },
     pollAllIncompleteOutputs() {
