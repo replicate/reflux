@@ -174,7 +174,7 @@
   u-button(
     v-if="replicate_api_token"
     @click="submit"
-    :disabled="loading || !replicate_api_token"
+    :disabled="loading || !replicate_api_token || versions.length <= 0"
     :loading="loading"
     size="xl"
     block
