@@ -12,7 +12,6 @@
       option-attribute="name"
       value-attribute="version"
       multiple
-      required
     )
   u-form-group(
     v-if="trigger_words.length > 0"
@@ -57,7 +56,6 @@
     )
   //- Number of outputs (conditional)
   u-form-group(
-    v-if="versions.length <= 1"
     label="Number of outputs"
     name="num_outputs"
   )
@@ -174,7 +172,7 @@
   u-button(
     v-if="replicate_api_token"
     @click="submit"
-    :disabled="loading || !replicate_api_token || versions.length <= 0"
+    :disabled="loading || !replicate_api_token"
     :loading="loading"
     size="xl"
     block

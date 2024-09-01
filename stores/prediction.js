@@ -13,32 +13,54 @@ export const usePredictionStore = defineStore('predictionStore', {
   actions: {
     async createBatch({ versions, num_outputs, input }) {
       try {
-        const predictions = await Promise.all(
-          versions.length > 1
-            ? versions.map((version) =>
-                $fetch('/api/prediction', {
-                  method: 'POST',
-                  body: {
-                    replicate_api_token: this.replicate_api_token,
-                    version,
-                    input
+
+        let predictions;
+
+        if (versions.length === 0) {
+          // If no versions are provided, create predictions without specifying a version
+          predictions = await Promise.all(
+            Array.from(Array(num_outputs).keys()).map(() =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  input
+                }
+              })
+            )
+          );
+        } else if (versions.length > 1) {
+          // If multiple versions are provided, create one prediction for each version
+          predictions = await Promise.all(
+            versions.map((version) =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  version,
+                  input
+                }
+              })
+            )
+          );
+        } else {
+          // If only one version is provided, create multiple predictions with that version
+          predictions = await Promise.all(
+            Array.from(Array(num_outputs).keys()).map(() =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  version: versions[0],
+                  input: {
+                    ...input,
+                    seed: Math.floor(Math.random() * 1000)
                   }
-                })
-              )
-            : Array.from(Array(num_outputs).keys()).map(() =>
-                $fetch('/api/prediction', {
-                  method: 'POST',
-                  body: {
-                    replicate_api_token: this.replicate_api_token,
-                    version: versions[0],
-                    input: {
-                      ...input,
-                      seed: Math.floor(Math.random() * 1000)
-                    }
-                  }
-                })
-              )
-        )
+                }
+              })
+            )
+          );
+        }
 
         const dotSpacing = 20
         const baseSize = 300

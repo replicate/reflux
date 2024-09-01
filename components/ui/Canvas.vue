@@ -23,7 +23,7 @@
       @mousedown.stop="startSelection"
       :data-id="output.id"
     )
-      u-tooltip(:text="output.metadata.name")
+      u-tooltip(:text="output.metadata.name || 'Flux'")
         template(v-if="output.status === 'succeeded'")
           img(
             v-if="output.output && output.output[0]"
