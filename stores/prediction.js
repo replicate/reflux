@@ -5,16 +5,78 @@ const parseAspectRatio = (aspectRatio) => {
   return { width, height }
 }
 
+const urlToBase64 = async (urlOrArray) => {
+  const convertSingle = async (url) => {
+    if (typeof url !== 'string' || !url.startsWith('https')) {
+      return url
+    }
+
+    try {
+      // Try to extract file extension from URL
+      const urlParts = url.split('/')
+      const fileName = urlParts[urlParts.length - 1]
+      const fileExtension = fileName.split('.').pop().toLowerCase()
+
+      const response = await fetch(url)
+      const blob = await response.blob()
+
+      // Determine file type
+      let fileType
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension)) {
+        fileType = `image/${fileExtension === 'jpg' ? 'jpeg' : fileExtension}`
+      } else {
+        fileType = blob.type || 'application/octet-stream'
+      }
+
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          const base64data = reader.result
+          const dataUri = `data:${fileType};base64,${base64data.split(',')[1]}`
+          resolve(dataUri)
+        }
+        reader.onerror = reject
+        reader.readAsDataURL(blob)
+      })
+    } catch (error) {
+      console.error('Error converting URL to base64:', error)
+      return url
+    }
+  }
+
+  if (Array.isArray(urlOrArray)) {
+    return Promise.all(urlOrArray.map(convertSingle))
+  } else {
+    return convertSingle(urlOrArray)
+  }
+}
+
 export const usePredictionStore = defineStore('predictionStore', {
   state: () => ({
     replicate_api_token: useLocalStorage('reflux-replicate-api-token', null),
     outputs: useLocalStorage('reflux-outputs', [])
   }),
   actions: {
-    async createBatch({ versions, num_outputs, input }) {
+    async createBatch({ versions, num_outputs, merge, input }) {
       try {
         const predictions = await Promise.all(
-          versions.length > 1
+          versions.length === 2 && merge
+            ? Array.from(Array(num_outputs).keys()).map(() =>
+                $fetch('/api/prediction', {
+                  method: 'POST',
+                  body: {
+                    replicate_api_token: this.replicate_api_token,
+                    version: versions[0],
+                    input: {
+                      ...input,
+                      extra_lora: flux.getOwnerNameByVersion(versions[1]),
+                      extra_lora_scale: input.lora_scale, // For now
+                      seed: Math.floor(Math.random() * 1000)
+                    }
+                  }
+                })
+              )
+            : versions.length > 1
             ? versions.map((version) =>
                 $fetch('/api/prediction', {
                   method: 'POST',
@@ -40,59 +102,27 @@ export const usePredictionStore = defineStore('predictionStore', {
               )
         )
 
-        const dotSpacing = 20
         const baseSize = 300
         const aspectRatio = parseAspectRatio(input.aspect_ratio)
-        const width = Math.round(
-          baseSize * (aspectRatio.width / aspectRatio.height)
-        )
-        const height = baseSize
+        const width = baseSize
+        const height = (aspectRatio.width / aspectRatio.height) * baseSize
 
-        // Calculate the bounding box for all new images
-        const totalWidth =
-          Math.ceil(Math.sqrt(predictions.length)) * (width + dotSpacing)
-        const totalHeight =
-          Math.ceil(Math.sqrt(predictions.length)) * (height + dotSpacing)
-
-        // Find the lowest y-coordinate of existing images
-        const lowestY = this.outputs.reduce(
-          (max, output) =>
-            Math.max(max, output.metadata.y + output.metadata.height),
-          0
-        )
-
-        // Calculate the starting position for the new images
-        const startX =
-          Math.ceil(window.innerWidth / 2 / dotSpacing) * dotSpacing -
-          Math.floor(totalWidth / 2)
-        const startY = Math.ceil(lowestY / dotSpacing) * dotSpacing + dotSpacing
-
-        let currentRow = 0
-        let currentCol = 0
-
-        predictions.forEach((prediction) => {
-          const x = startX + currentCol * (width + dotSpacing)
-          const y = startY + currentRow * (height + dotSpacing)
-
+        predictions.forEach((prediction, index) => {
           this.outputs.push({
             id: prediction.id,
             status: prediction.status,
             input,
             output: null,
             metadata: {
-              name: flux.getNameByVersion(prediction.version),
-              x,
-              y,
+              prediction_id: prediction.id,
+              name: flux.getOwnerNameByVersion(prediction.version),
+              x: 0,
+              y: 0,
+              rotation: 0,
               width,
               height
             }
           })
-
-          currentCol++
-          if (currentCol * (width + dotSpacing) >= totalWidth) {
-            currentCol = 0
-            currentRow++
-          }
         })
 
         return predictions
@@ -100,38 +130,75 @@ export const usePredictionStore = defineStore('predictionStore', {
         console.log('--- (stores/prediction) error:', e.message)
       }
     },
-    async pollPrediction(prediction_id) {
+    async pollIncompletePredictions() {
       try {
-        const result = await $fetch(
-          `/api/prediction?id=${prediction_id}&token=${this.replicate_api_token}`
+        const prediction_ids = [
+          ...new Set(
+            this.incompleteOutputs
+              .map((output) => output?.metadata?.prediction_id || null)
+              .filter((id) => id)
+          )
+        ]
+        const predictions = await $fetch(
+          `/api/prediction?ids=${prediction_ids.join(',')}&token=${
+            this.replicate_api_token
+          }`
         )
 
+        for (const prediction of predictions) {
+          // Update outputs with the same prediction_id in the state
+          const targets = this.outputs.filter(
+            (i) => i?.metadata?.prediction_id === prediction.id
+          )
+
+          for (const target of targets) {
+            // Update the corresponding output in the state
+            const index = this.outputs.findIndex((i) => i.id === target.id)
+            if (index !== -1) {
+              this.outputs[index] = {
+                ...this.outputs[index],
+                input: prediction.input,
+                status: prediction.status,
+                output: await urlToBase64(prediction.output)
+              }
+            }
+          }
+        }
+
+        /*
         // Update the corresponding output in the state
-        const index = this.outputs.findIndex(
-          (output) => output.id === prediction_id
-        )
+        const index = this.outputs.findIndex((i) => i.id === output.id)
         if (index !== -1) {
           this.outputs[index] = {
             ...this.outputs[index],
-            id: prediction_id,
             input: result.input,
             status: result.status,
             output: result.output
           }
         }
+        */
       } catch (e) {
         console.log(
-          `--- (stores/prediction) error polling prediction ${prediction_id}:`,
+          '--- (stores/prediction) error polling incomplete predictions:',
           e.message
         )
       }
     },
-    updateOutputPosition({ id, x, y }) {
+    updateOutputPosition({ id, x, y, rotation, width, height }) {
       const index = this.outputs.findIndex((output) => output.id === id)
       if (index !== -1) {
-        const dotSpacing = 40 // Make sure this matches the value in Canvas.vue
-        this.outputs[index].metadata.x = Math.round(x / dotSpacing) * dotSpacing
-        this.outputs[index].metadata.y = Math.round(y / dotSpacing) * dotSpacing
+        this.outputs[index].metadata.x = x
+        this.outputs[index].metadata.y = y
+        this.outputs[index].metadata.rotation = rotation
+        if (width !== undefined) this.outputs[index].metadata.width = width
+        if (height !== undefined) this.outputs[index].metadata.height = height
+      }
+    },
+    addOutput(output) {
+      if (Array.isArray(output)) {
+        this.outputs.push(...output)
+      } else {
+        this.outputs.push(output)
       }
     },
     removeOutput(id) {

@@ -13,21 +13,17 @@ export default {
   }),
   computed: mapState(usePredictionStore, ['incompleteOutputs']),
   methods: {
-    ...mapActions(usePredictionStore, ['pollPrediction']),
+    ...mapActions(usePredictionStore, ['pollIncompletePredictions']),
     clearInterval() {
       if (this.interval) {
         clearInterval(this.interval)
         this.interval = null
       }
-    },
-    pollAllIncompleteOutputs() {
-      this.incompleteOutputs.forEach((output) => this.pollPrediction(output.id))
     }
   },
   watch: {
     incompleteOutputs: {
       immediate: true,
-      deep: true,
       handler(incompleteOutputs) {
         if (incompleteOutputs.length <= 0) {
           this.clearInterval()
@@ -36,7 +32,7 @@ export default {
 
         if (!this.interval) {
           this.interval = setInterval(
-            this.pollAllIncompleteOutputs,
+            this.pollIncompletePredictions,
             POLL_INTERVAL
           )
         }

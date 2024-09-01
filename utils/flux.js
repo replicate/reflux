@@ -5,9 +5,9 @@ class Flux {
     this.version_options = useLocalStorage('reflux-version-options', [])
   }
 
-  getNameByVersion(version) {
+  getOwnerNameByVersion(version) {
     const item = this.version_options.value.find((i) => i.version === version)
-    return item ? item.name : null
+    return item ? `${item.owner}/${item.name}` : null
   }
 
   getVersionByName(name) {

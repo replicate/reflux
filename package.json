@@ -15,7 +15,9 @@
     "@pinia/nuxt": "^0.5.2",
     "@vueuse/core": "^10.11.0",
     "@vueuse/nuxt": "^10.11.0",
-    "all-the-public-replicate-models": "^1.303.0",
+    "all-the-public-replicate-models": "^1.310.0",
+    "konva": "^9.3.14",
+    "lodash-es": "^4.17.21",
     "nuxt": "^3.12.4",
     "uuid": "^10.0.0",
     "vue": "latest"

@@ -71,12 +71,15 @@ export default defineEventHandler(async (event) => {
     const filtered = models
       .filter(
         (i) =>
-          i?.name.includes('flux') &&
+          ((i?.name || '') + ' ' + (i?.description || '')).includes('flux') &&
           i?.latest_version?.openapi_schema?.components?.schemas?.TrainingInput
       )
       .map((i) => ({
-        name: `${i.owner} / ${i.name}`,
+        owner: i.owner,
+        name: i.name,
+        description: i?.description || '',
         version: i?.latest_version?.id,
+        cover_image_url: i?.cover_image_url || null,
         trigger: getTriggerWord(i)
       }))
 

@@ -3,39 +3,39 @@
 
   //- Models
   u-form-group(
-    label="Flux finetunes"
-    name="versions"
+    label="Flux fine-tunes"
   )
-    u-select-menu(
-      v-model="versions"
-      :options="version_options"
-      option-attribute="name"
-      value-attribute="version"
-      multiple
-      required
+    ui-form-version-picker
+    u-button.mr-2.mt-2(
+      v-for="(trigger, i) in trigger_words"
+      :key="`trigger-word-${i}`"
+      @click="prompt += ' ' + trigger.word"
+      color="white"
+      size="2xs"
+      block
     )
-  u-form-group(
-    v-if="trigger_words.length > 0"
-    label="Trigger words"
-  )
-    .flex.flex-col.gap-y-2
-      .flex.items-center(
-        v-for="(trigger, i) in trigger_words"
-        :key="`trigger-word-${i}`"
+      .flex-grow.text-left.font-light {{ trigger.name }}
+      u-divider.mx-1.h-4(orientation="vertical")
+      | {{ trigger.word }}
+      u-divider.mx-1.h-4(orientation="vertical")
+      u-icon(
+        @click.stop="versions = versions.filter((version) => version !== trigger.version)"
+        name="i-heroicons-trash"
       )
-        .text-xs.flex-grow {{ trigger.name }}:
-        .flex.gap-x-2
-          u-badge(
-            color="gray"
-            size="xs"
-          ) {{ trigger.word }}
-          u-button(
-            @click="versions = versions.filter((v) => v !== trigger.version)"
-            color="white"
-            icon="i-heroicons-trash"
-            size="xs"
-            square
-          )
+  //- Merge
+  u-form-group(
+    v-if="versions.length > 1"
+    :ui="{ container: '', hint: 'text-gray-500 dark:text-gray-400 flex align-center' }"
+    :description="versions.length !== 2 ? 'You can only merge two fine-tunes.' : ''"
+    label="Merge into same image"
+    name="merge"
+  )
+    template(#hint)
+      u-toggle(
+        v-model="merge"
+        :disabled="versions.length !== 2"
+        size="lg"
+      )
   //- Prompt
   u-form-group(
     label="Prompt"
@@ -55,26 +55,6 @@
       v-model="aspect_ratio"
       :options="aspect_ratio_options"
     )
-  //- Number of outputs (conditional)
-  u-form-group(
-    v-if="versions.length <= 1"
-    label="Number of outputs"
-    name="num_outputs"
-  )
-    .flex.items-center.gap-x-4
-      u-range.flex-grow(
-        v-model="num_outputs"
-        :min="1"
-        :max="4"
-        :step="1"
-      )
-      u-input.w-24(
-        v-model="num_outputs"
-        type="number"
-        min="1"
-        max="4"
-        step="1"
-      )
   //- LoRA scale
   u-form-group(
     label="LoRA scale"
@@ -170,6 +150,26 @@
         max="100"
         step="1"
       )
+  //- Number of outputs (conditional)
+  u-form-group(
+    v-if="versions.length <= 1 || merge"
+    label="Number of outputs"
+    name="num_outputs"
+  )
+    .flex.items-center.gap-x-4
+      u-range.flex-grow(
+        v-model="num_outputs"
+        :min="1"
+        :max="4"
+        :step="1"
+      )
+      u-input.w-24(
+        v-model="num_outputs"
+        type="number"
+        min="1"
+        max="4"
+        step="1"
+      )
   //- Submit
   u-button(
     v-if="replicate_api_token"
@@ -206,11 +206,11 @@ export default {
     guidance_scale: useLocalStorage('reflux-guidance_scale', 3.5),
     seed: useLocalStorage('reflux-seed', null),
     output_format: useLocalStorage('reflux-output_format', 'webp'),
-    output_quality: useLocalStorage('reflux-output_quality', 80)
+    output_quality: useLocalStorage('reflux-output_quality', 80),
+    merge: useLocalStorage('reflux-merge', false)
   }),
   data: () => ({
     loading: false,
-    version_options: flux.version_options,
     aspect_ratio_options: [
       '1:1',
       '16:9',
@@ -230,34 +230,9 @@ export default {
     trigger_words() {
       return this.versions.map((version) => ({
         version,
-        name: flux.getNameByVersion(version),
+        name: flux.getOwnerNameByVersion(version),
         word: flux.getTriggerByVersion(version)
       }))
-    }
-  },
-  watch: {
-    replicate_api_token: {
-      immediate: true,
-      async handler(token) {
-        if (!token) return
-
-        try {
-          const versions = await $fetch('/api/search')
-          // Dedupe by version key and sort alphabetically by name
-          const versionMap = new Map(
-            [...this.version_options, ...versions].map((v) => [v.version, v])
-          )
-          const version_options = Array.from(versionMap.values()).sort((a, b) =>
-            a.name.localeCompare(b.name)
-          )
-
-          // Persist
-          flux.setVersionOptions([])
-          flux.setVersionOptions(version_options)
-        } catch (e) {
-          console.log('--- (create) error:', e.message)
-        }
-      }
     }
   },
   methods: {
@@ -268,6 +243,7 @@ export default {
         await this.createBatch({
           versions: this.versions,
           num_outputs: this.num_outputs,
+          merge: this.merge,
           input: {
             prompt: this.prompt,
             aspect_ratio: this.aspect_ratio,

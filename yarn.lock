@@ -2544,14 +2544,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"all-the-public-replicate-models@npm:^1.303.0":
-  version: 1.303.0
-  resolution: "all-the-public-replicate-models@npm:1.303.0"
+"all-the-public-replicate-models@npm:^1.310.0":
+  version: 1.310.0
+  resolution: "all-the-public-replicate-models@npm:1.310.0"
   bin:
     all-the-public-replicate-models: cli.js
     all-the-replicate-models: cli.js
     replicate-models: cli.js
-  checksum: 526978cf17a63290022c704a8810818c129c89eb5e934f69fa4e9e219cb5c4d005a82c6badf676ff8d42b0fab8a5d777edcf17a2d6d89255213773cc020af1ed
+  checksum: daec50d1fffed18ca5077811cbad35a3e12dfa075cd93abfbb0dbe81ee573222589c18f66a58786671d30ffd73984d7cd4905afe7b4c5cd0095c332b2002fece
   languageName: node
   linkType: hard
 
@@ -5524,6 +5524,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"konva@npm:^9.3.14":
+  version: 9.3.14
+  resolution: "konva@npm:9.3.14"
+  checksum: 32d7e0dff57799a375f2f0b9b8fe99bea44984e2bc49aaff12e0d43808ae5ff47417d6c63f0ce53b83baa78c648dab3bb0d8a261fea302810adf5a665fc8be64
+  languageName: node
+  linkType: hard
+
 "launch-editor@npm:^2.8.0":
   version: 2.8.1
   resolution: "launch-editor@npm:2.8.1"
@@ -5620,6 +5627,13 @@ __metadata:
   dependencies:
     p-locate: ^5.0.0
   checksum: 72eb661788a0368c099a184c59d2fee760b3831c9c1c33955e8a19ae4a21b4116e53fa736dc086cdeb9fce9f7cc508f2f92d2d3aae516f133e16a2bb59a39f5a
+  languageName: node
+  linkType: hard
+
+"lodash-es@npm:^4.17.21":
+  version: 4.17.21
+  resolution: "lodash-es@npm:4.17.21"
+  checksum: 05cbffad6e2adbb331a4e16fbd826e7faee403a1a04873b82b42c0f22090f280839f85b95393f487c1303c8a3d2a010048bf06151a6cbe03eee4d388fb0a12d2
   languageName: node
   linkType: hard
 
@@ -7534,7 +7548,9 @@ __metadata:
     "@pinia/nuxt": ^0.5.2
     "@vueuse/core": ^10.11.0
     "@vueuse/nuxt": ^10.11.0
-    all-the-public-replicate-models: ^1.303.0
+    all-the-public-replicate-models: ^1.310.0
+    konva: ^9.3.14
+    lodash-es: ^4.17.21
     nuxt: ^3.12.4
     pug: ^3.0.3
     pug-plain-loader: ^1.1.0

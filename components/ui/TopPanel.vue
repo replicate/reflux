@@ -82,14 +82,36 @@
 </template>
 
 <script>
-import { useLocalStorage } from '@vueuse/core'
+import { useLocalStorage, onKeyStroke } from '@vueuse/core'
 
 export default {
   name: 'UiTopPanel',
-  setup: () => ({
-    tool: useLocalStorage('reflux-tool', 'V'),
-    replicate_api_token: useLocalStorage('reflux-replicate-api-token', null)
-  }),
+  setup: () => {
+    const tool = useLocalStorage('reflux-tool', 'V')
+    const replicate_api_token = useLocalStorage(
+      'reflux-replicate-api-token',
+      null
+    )
+
+    onKeyStroke(['v', 'V'], (e) => {
+      if (!['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        tool.value = 'V'
+      }
+    })
+
+    onKeyStroke(['h', 'H'], (e) => {
+      if (!['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+        e.preventDefault()
+        tool.value = 'H'
+      }
+    })
+
+    return {
+      tool,
+      replicate_api_token
+    }
+  },
   methods: {
     openCode() {
       window.open('https://github.com/replicate/reflux', '_blank').focus()
