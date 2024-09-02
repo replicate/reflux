@@ -165,7 +165,7 @@ export default {
             ? 'i-heroicons-check'
             : training?.status !== 'failed'
             ? 'i-heroicons-arrow-path'
-            : 'i-heroicons-question-mark-circle',
+            : 'i-heroicons-exclamation-triangle',
         status: training?.status,
         description:
           training?.status === 'succeeded'
@@ -191,6 +191,7 @@ export default {
   watch: {
     trainings: {
       immediate: true,
+      deep: true,
       handler(trainings) {
         // Find trainings that are done preprocessing
         const done_preprocessing = trainings.filter(

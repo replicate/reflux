@@ -207,9 +207,19 @@ export const usePredictionStore = defineStore('predictionStore', {
     async createTraining(training) {
       try {
         const { trigger_word, destination } = training?.metadata
+        const output = training?.output || []
+
+        // Fail early
+        if (output.length <= 0) {
+          const index = this.trainings.findIndex((i) => i.id === training.id)
+          if (index !== -1) {
+            this.trainings[index].status = 'failed'
+          }
+          return null
+        }
 
         // ZIP files
-        const input_images = await downloadAndZipImages(training?.output || [])
+        const input_images = await downloadAndZipImages(output)
         const input = {
           input_images,
           trigger_word
