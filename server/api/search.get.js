@@ -9,17 +9,17 @@ const getTriggerWord = (model) => {
 
   const checkPatterns = (str) => {
     // Regular expressions for different trigger word patterns
-    const allCapsPattern = /\b[A-Z]{2,}\b/
     const quotedPattern = /"([^"]+)"|'([^']+)'/
+    const allCapsPattern = /\b[A-Z]{2,}\b/
     const stylePattern = /(\S+(?:\s+\S+)*)\s+style/i
-
-    // Check for all-caps words
-    const allCapsMatch = str.match(allCapsPattern)
-    if (allCapsMatch) return allCapsMatch[0]
 
     // Check for quoted words
     const quotedMatch = str.match(quotedPattern)
     if (quotedMatch) return quotedMatch[1] || quotedMatch[2]
+
+    // Check for all-caps words
+    const allCapsMatch = str.match(allCapsPattern)
+    if (allCapsMatch) return allCapsMatch[0]
 
     // Check for words followed by 'style'
     // const styleMatch = str.match(stylePattern)
@@ -42,30 +42,6 @@ const getTriggerWord = (model) => {
 
 export default defineEventHandler(async (event) => {
   try {
-    /*
-    const { token, q } = getQuery(event)
-
-    const result = await fetch(`https://api.replicate.com/v1/models`, {
-      method: 'QUERY',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'text/plain',
-        'User-Agent': 'ReFlux/1.0'
-      },
-      body: q
-    })
-
-    const data = await result.json()
-
-    const filtered = data.results.filter(
-      (i) =>
-        i?.latest_version?.openapi_schema?.components?.schemas?.TrainingInput
-    )
-      .map((i) => ({
-        name: `${i.owner} / ${i.name}`,
-        version: i?.latest_version?.id
-      }))
-    */
     const { token } = getQuery(event)
 
     // Get trainings
