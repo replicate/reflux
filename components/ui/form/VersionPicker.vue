@@ -98,16 +98,15 @@ export default {
     }
   },
   watch: {
-    is_open: {
-      async handler(is_open) {
-        if (!is_open || !this.replicate_api_token) {
+    replicate_api_token: {
+      immediate: true,
+      async handler(token) {
+        if (!token) {
           return
         }
 
         try {
-          const versions = await $fetch(
-            `/api/search?token=${this.replicate_api_token}`
-          )
+          const versions = await $fetch(`/api/search?token=${this.token}`)
           // Dedupe by version key and sort alphabetically by name
           const versionMap = new Map(versions.map((v) => [v.version, v]))
           const version_options = Array.from(versionMap.values()).sort((a, b) =>
