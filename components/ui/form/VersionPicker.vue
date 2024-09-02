@@ -19,11 +19,25 @@ div
       template(#header)
         u-input.py-1(
           v-model="query"
-          placeholder="Search public Flux fine-tunes..."
+          placeholder="Search..."
           icon="i-heroicons-magnifying-glass"
           variant="none"
           size="xl"
         )
+        u-divider
+        .px-6.py-3
+          u-button.mr-3(
+            @click="search_filter = 'replicate'"
+            :color="search_filter === 'replicate' ? 'primary' : 'white'"
+            label="On Replicate"
+            size="md"
+          )
+          u-button(
+            @click="search_filter = 'owner'"
+            :color="search_filter === 'owner' ? 'primary' : 'white'"
+            label="Your own"
+            size="md"
+          )
 
       .grid.grid-cols-4.gap-3
         .cursor-pointer.break-all.p-3(
@@ -32,7 +46,7 @@ div
           :class="versions.includes(version.version) ? 'bg-[#ebb305]' : 'hover:bg-[#f8f8f8]'"
           @click="onClick(version.version)"
         )
-          img.aspect-1.object-cover.mb-2(:src="version.cover_image_url")
+          img.aspect-1.object-cover.mb-2(:src="version?.cover_image_url || '/replicate-logo.svg'")
           .text-sm.font-bold {{ version.name }}
           .text-xs {{ version.owner }}
 </template>
@@ -56,6 +70,7 @@ export default {
     return {
       replicate_api_token: useLocalStorage('reflux-replicate-api-token', null),
       versions: useLocalStorage('reflux-versions', []),
+      search_filter: useLocalStorage('reflux-search_filter', 'replicate'),
 
       metaSymbol,
       is_open
@@ -67,23 +82,31 @@ export default {
   }),
   computed: {
     results() {
+      const subset = this.version_options.filter(
+        (version) => version.is_owner === (this.search_filter === 'owner')
+      )
+
       if (!this.query.trim()) {
-        return this.version_options
+        return subset
       }
+
       const lowercaseQuery = this.query.toLowerCase().trim()
-      return this.version_options.filter((version) =>
+      return subset.filter((version) =>
         version.name.toLowerCase().includes(lowercaseQuery)
       )
     }
   },
   watch: {
-    replicate_api_token: {
-      immediate: true,
-      async handler(token) {
-        if (!token) return
+    is_open: {
+      async handler(is_open) {
+        if (!is_open || this.replicate_api_token) {
+          return
+        }
 
         try {
-          const versions = await $fetch('/api/search')
+          const versions = await $fetch(
+            `/api/search?token=${this.replicate_api_token}`
+          )
           // Dedupe by version key and sort alphabetically by name
           const versionMap = new Map(versions.map((v) => [v.version, v]))
           const version_options = Array.from(versionMap.values()).sort((a, b) =>

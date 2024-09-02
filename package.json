@@ -16,6 +16,7 @@
     "@vueuse/core": "^10.11.0",
     "@vueuse/nuxt": "^10.11.0",
     "all-the-public-replicate-models": "^1.310.0",
+    "jszip": "^3.10.1",
     "konva": "^9.3.14",
     "lodash-es": "^4.17.21",
     "nuxt": "^3.12.4",

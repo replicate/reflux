@@ -4,14 +4,14 @@
 import { mapState, mapActions } from 'pinia'
 import { usePredictionStore } from '~/stores/prediction'
 
-const POLL_INTERVAL = 2000
+const POLL_INTERVAL = 3000
 
 export default {
   name: 'PredictionPoller',
   data: () => ({
     interval: null
   }),
-  computed: mapState(usePredictionStore, ['incompleteOutputs']),
+  computed: mapState(usePredictionStore, ['incompletePredictions']),
   methods: {
     ...mapActions(usePredictionStore, ['pollIncompletePredictions']),
     clearInterval() {
@@ -22,10 +22,10 @@ export default {
     }
   },
   watch: {
-    incompleteOutputs: {
+    incompletePredictions: {
       immediate: true,
-      handler(incompleteOutputs) {
-        if (incompleteOutputs.length <= 0) {
+      handler(incompletePredictions) {
+        if (incompletePredictions.length <= 0) {
           this.clearInterval()
           return
         }

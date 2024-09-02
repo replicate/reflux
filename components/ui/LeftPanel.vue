@@ -1,17 +1,14 @@
 <template lang="pug">
 .flex-shrink-0.overflow-y-auto.w-80.border-r
   .p-2
-    ui-form-create
-
     //- Hide for now
     u-tabs(
-      v-if="false"
       :items="tab_items"
     )
       template(#create="{ item }")
         ui-form-create
       template(#finetune="{ item }")
-        b FINETUNE
+        ui-form-finetune
 </template>
 
 <script>

@@ -1,3 +1,4 @@
+import JSZip from 'jszip'
 import { useLocalStorage } from '@vueuse/core'
 
 const parseAspectRatio = (aspectRatio) => {
@@ -51,10 +52,31 @@ const urlToBase64 = async (urlOrArray) => {
   }
 }
 
+const downloadAndZipImages = async (urls) => {
+  const zip = new JSZip()
+  const promises = urls.map(async (url) => {
+    const response = await fetch(url)
+    const blob = await response.blob()
+    const fileName = url.split('/').pop()
+    zip.file(fileName, blob)
+  })
+  await Promise.all(promises)
+  const zipBlob = await zip.generateAsync({ type: 'blob' })
+  const reader = new FileReader()
+  return new Promise((resolve) => {
+    reader.onloadend = () => {
+      const base64data = reader.result.split(',')[1]
+      resolve(`data:application/zip;base64,${base64data}`)
+    }
+    reader.readAsDataURL(zipBlob)
+  })
+}
+
 export const usePredictionStore = defineStore('predictionStore', {
   state: () => ({
     replicate_api_token: useLocalStorage('reflux-replicate-api-token', null),
-    outputs: useLocalStorage('reflux-outputs', [])
+    outputs: useLocalStorage('reflux-outputs', []),
+    trainings: useLocalStorage('reflux-trainings', [])
   }),
   actions: {
     async createBatch({ versions, num_outputs, merge, input }) {
@@ -130,11 +152,99 @@ export const usePredictionStore = defineStore('predictionStore', {
         console.log('--- (stores/prediction) error:', e.message)
       }
     },
+    async createTrainingPrestep({ name, trigger_word, visibility, input }) {
+      try {
+        const model = await $fetch('/api/model', {
+          method: 'POST',
+          body: {
+            replicate_api_token: this.replicate_api_token,
+            name,
+            trigger_word,
+            visibility
+          }
+        })
+
+        if (!model?.owner) {
+          throw new Error('failed to create model')
+        }
+
+        const prediction = await $fetch('/api/prediction', {
+          method: 'POST',
+          body: {
+            replicate_api_token: this.replicate_api_token,
+            // https://replicate.com/fofr/consistent-character
+            version:
+              '9c77a3c2f884193fcee4d89645f02a0b9def9434f9e03cb98460456b831c8772',
+            input: {
+              ...input,
+              number_of_outputs: 2,
+              number_of_images_per_pose: 1,
+              randomise_poses: true,
+              output_format: 'webp',
+              output_quality: 80
+            }
+          }
+        })
+
+        this.trainings.push({
+          id: prediction.id,
+          status: prediction.status,
+          input,
+          output: null,
+          metadata: {
+            prediction_id: prediction.id,
+            pipeline_stage: 'preprocessing',
+            trigger_word,
+            destination: model
+          }
+        })
+
+        return prediction
+      } catch (e) {
+        console.log('--- (stores/prediction) error:', e.message)
+      }
+    },
+    async createTraining(training) {
+      try {
+        const { trigger_word, destination } = training?.metadata
+
+        // ZIP files
+        const input_images = await downloadAndZipImages(training?.output || [])
+        const input = {
+          input_images,
+          trigger_word
+        }
+
+        const prediction = await $fetch('/api/training', {
+          method: 'POST',
+          body: {
+            replicate_api_token: this.replicate_api_token,
+            destination: `${destination?.owner}/${destination?.name}`,
+            input
+          }
+        })
+
+        // Update training
+        const index = this.trainings.findIndex((i) => i.id === training.id)
+        if (index !== -1) {
+          this.trainings[index].id = prediction.id
+          this.trainings[index].status = prediction.status
+          this.trainings[index].input = input
+          this.trainings[index].output = null
+          this.trainings[index].metadata.prediction_id = prediction.id
+          this.trainings[index].metadata.pipeline_stage = 'processing'
+        }
+
+        return prediction
+      } catch (e) {
+        console.log('--- (stores/prediction) error:', e.message)
+      }
+    },
     async pollIncompletePredictions() {
       try {
         const prediction_ids = [
           ...new Set(
-            this.incompleteOutputs
+            this.incompletePredictions
               .map((output) => output?.metadata?.prediction_id || null)
               .filter((id) => id)
           )
@@ -147,7 +257,7 @@ export const usePredictionStore = defineStore('predictionStore', {
 
         for (const prediction of predictions) {
           // Update outputs with the same prediction_id in the state
-          const targets = this.outputs.filter(
+          let targets = this.outputs.filter(
             (i) => i?.metadata?.prediction_id === prediction.id
           )
 
@@ -163,20 +273,25 @@ export const usePredictionStore = defineStore('predictionStore', {
               }
             }
           }
-        }
 
-        /*
-        // Update the corresponding output in the state
-        const index = this.outputs.findIndex((i) => i.id === output.id)
-        if (index !== -1) {
-          this.outputs[index] = {
-            ...this.outputs[index],
-            input: result.input,
-            status: result.status,
-            output: result.output
+          // Update trainings with the same prediction_id in the state
+          targets = this.trainings.filter(
+            (i) => i?.metadata?.prediction_id === prediction.id
+          )
+
+          for (const target of targets) {
+            // Update the corresponding output in the state
+            const index = this.trainings.findIndex((i) => i.id === target.id)
+            if (index !== -1) {
+              this.trainings[index] = {
+                ...this.trainings[index],
+                input: prediction.input,
+                status: prediction.status,
+                output: prediction.output
+              }
+            }
           }
         }
-        */
       } catch (e) {
         console.log(
           '--- (stores/prediction) error polling incomplete predictions:',
@@ -210,8 +325,8 @@ export const usePredictionStore = defineStore('predictionStore', {
     }
   },
   getters: {
-    incompleteOutputs: (state) =>
-      state.outputs.filter(
+    incompletePredictions: (state) =>
+      [...state.outputs, ...state.trainings].filter(
         (output) => output.status !== 'succeeded' && output.status !== 'failed'
       )
   }

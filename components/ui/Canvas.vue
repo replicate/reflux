@@ -23,7 +23,7 @@ import { mapState, mapActions } from 'pinia'
 const BORDER_WIDTH = 1
 
 export default {
-  name: 'Canvas',
+  name: 'UiCanvas',
   setup() {
     const tool = useLocalStorage('reflux-tool', 'V')
     const canvasState = useLocalStorage('reflux-canvas-state-test', {

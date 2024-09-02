@@ -24,9 +24,8 @@
       )
   //- Merge
   u-form-group(
-    v-if="versions.length > 1"
     :ui="{ container: '', hint: 'text-gray-500 dark:text-gray-400 flex align-center' }"
-    :description="versions.length !== 2 ? 'You can only merge two fine-tunes.' : ''"
+    :help="versions.length !== 2 ? 'You can only merge two fine-tunes.' : ''"
     label="Merge into same image"
     name="merge"
   )
