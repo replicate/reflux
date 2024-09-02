@@ -1,4 +1,3 @@
-import JSZip from 'jszip'
 import { useLocalStorage } from '@vueuse/core'
 
 const parseAspectRatio = (aspectRatio) => {
@@ -50,26 +49,6 @@ const urlToBase64 = async (urlOrArray) => {
   } else {
     return convertSingle(urlOrArray)
   }
-}
-
-const downloadAndZipImages = async (urls) => {
-  const zip = new JSZip()
-  const promises = urls.map(async (url) => {
-    const response = await fetch(url)
-    const blob = await response.blob()
-    const fileName = url.split('/').pop()
-    zip.file(fileName, blob)
-  })
-  await Promise.all(promises)
-  const zipBlob = await zip.generateAsync({ type: 'blob' })
-  const reader = new FileReader()
-  return new Promise((resolve) => {
-    reader.onloadend = () => {
-      const base64data = reader.result.split(',')[1]
-      resolve(`data:application/zip;base64,${base64data}`)
-    }
-    reader.readAsDataURL(zipBlob)
-  })
 }
 
 export const usePredictionStore = defineStore('predictionStore', {
@@ -218,19 +197,8 @@ export const usePredictionStore = defineStore('predictionStore', {
           return null
         }
 
-        // ZIP & upload files
-        const input_images_base64 = await downloadAndZipImages(output)
-        const { data } = await $fetch('/api/file', {
-          method: 'POST',
-          body: {
-            replicate_api_token: this.replicate_api_token,
-            file_name: 'input_images.zip',
-            data: input_images_base64
-          }
-        })
-
         const input = {
-          input_images: data,
+          input_images: output,
           trigger_word
         }
 
