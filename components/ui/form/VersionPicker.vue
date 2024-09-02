@@ -106,7 +106,7 @@ export default {
         }
 
         try {
-          const versions = await $fetch(`/api/search?token=${this.token}`)
+          const versions = await $fetch(`/api/search?token=${token}`)
           // Dedupe by version key and sort alphabetically by name
           const versionMap = new Map(versions.map((v) => [v.version, v]))
           const version_options = Array.from(versionMap.values()).sort((a, b) =>
