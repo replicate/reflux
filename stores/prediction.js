@@ -218,10 +218,19 @@ export const usePredictionStore = defineStore('predictionStore', {
           return null
         }
 
-        // ZIP files
-        const input_images = await downloadAndZipImages(output)
+        // ZIP & upload files
+        const input_images_base64 = await downloadAndZipImages(output)
+        const { data } = await $fetch('/api/file', {
+          method: 'POST',
+          body: {
+            replicate_api_token: this.replicate_api_token,
+            file_name: 'input_images.zip',
+            data: input_images_base64
+          }
+        })
+
         const input = {
-          input_images,
+          input_images: data,
           trigger_word
         }
 
