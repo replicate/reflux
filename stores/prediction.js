@@ -1,5 +1,7 @@
 import { useLocalStorage } from '@vueuse/core'
 
+import { useVersionStore } from './version'
+
 const parseAspectRatio = (aspectRatio) => {
   const [width, height] = aspectRatio.split(':').map(Number)
   return { width, height }
@@ -60,6 +62,8 @@ export const usePredictionStore = defineStore('predictionStore', {
   actions: {
     async createBatch({ versions, num_outputs, merge, input }) {
       try {
+        const versionStore = useVersionStore()
+
         const predictions = await Promise.all(
           versions.length === 2 && merge
             ? Array.from(Array(num_outputs).keys()).map(() =>
@@ -70,7 +74,9 @@ export const usePredictionStore = defineStore('predictionStore', {
                     version: versions[0],
                     input: {
                       ...input,
-                      extra_lora: flux.getOwnerNameByVersion(versions[1]),
+                      extra_lora: versionStore.getOwnerNameByVersion(
+                        versions[1]
+                      ),
                       extra_lora_scale: input.lora_scale, // For now
                       seed: Math.floor(Math.random() * 1000)
                     }
@@ -116,7 +122,7 @@ export const usePredictionStore = defineStore('predictionStore', {
             output: null,
             metadata: {
               prediction_id: prediction.id,
-              name: flux.getOwnerNameByVersion(prediction.version),
+              name: versionStore.getOwnerNameByVersion(prediction.version),
               x: 0,
               y: 0,
               rotation: 0,
