@@ -99,7 +99,7 @@ export default {
   watch: {
     is_open: {
       async handler(is_open) {
-        if (!is_open || this.replicate_api_token) {
+        if (!is_open || !this.replicate_api_token) {
           return
         }
 
