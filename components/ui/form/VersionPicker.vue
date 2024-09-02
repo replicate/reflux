@@ -53,6 +53,7 @@ div
 
 <script>
 import { useLocalStorage, onKeyStroke } from '@vueuse/core'
+import { mapState, mapActions } from 'pinia'
 
 export default {
   name: 'UiFormVersionPicker',
@@ -77,10 +78,10 @@ export default {
     }
   },
   data: () => ({
-    version_options: flux.version_options,
     query: ''
   }),
   computed: {
+    ...mapState(useVersionStore, ['version_options', 'getTriggerByVersion']),
     results() {
       const subset = this.version_options.filter(
         (version) => version.is_owner === (this.search_filter === 'owner')
@@ -114,8 +115,7 @@ export default {
           )
 
           // Persist
-          flux.setVersionOptions([])
-          flux.setVersionOptions(version_options)
+          this.setVersionOptions(version_options)
         } catch (e) {
           console.log('--- (create) error:', e.message)
         }
@@ -123,6 +123,7 @@ export default {
     }
   },
   methods: {
+    ...mapActions(useVersionStore, ['setVersionOptions']),
     onClick(version) {
       if (this.versions.includes(version)) {
         this.versions = this.versions.filter((v) => v !== version)

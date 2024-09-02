@@ -189,7 +189,7 @@
 
 <script>
 import { useLocalStorage } from '@vueuse/core'
-import { mapActions } from 'pinia'
+import { mapState, mapActions } from 'pinia'
 
 export default {
   name: 'UiFormCreate',
@@ -226,11 +226,15 @@ export default {
     output_format_options: ['webp', 'jpg', 'png']
   }),
   computed: {
+    ...mapState(useVersionStore, [
+      'getOwnerNameByVersion',
+      'getTriggerByVersion'
+    ]),
     trigger_words() {
       return this.versions.map((version) => ({
         version,
-        name: flux.getOwnerNameByVersion(version),
-        word: flux.getTriggerByVersion(version)
+        name: this.getOwnerNameByVersion(version),
+        word: this.getTriggerByVersion(version)
       }))
     }
   },
