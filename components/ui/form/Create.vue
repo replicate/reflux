@@ -63,14 +63,14 @@
       u-range.flex-grow(
         v-model="lora_scale"
         :min="-1"
-        :max="2"
+        :max="1"
         :step="0.01"
       )
       u-input.w-24(
         v-model="lora_scale"
         type="number"
         min="-1"
-        max="2"
+        max="1"
         step="0.01"
       )
   //- Inference steps
