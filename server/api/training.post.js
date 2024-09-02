@@ -4,20 +4,15 @@ const downloadAndZipImages = async (urls) => {
   const zip = new JSZip()
   const promises = urls.map(async (url) => {
     const response = await fetch(url)
-    const blob = await response.blob()
+    const arrayBuffer = await response.arrayBuffer()
     const fileName = url.split('/').pop()
-    zip.file(fileName, blob)
+    zip.file(fileName, arrayBuffer)
   })
   await Promise.all(promises)
   const zipBlob = await zip.generateAsync({ type: 'blob' })
-  const reader = new FileReader()
-  return new Promise((resolve) => {
-    reader.onloadend = () => {
-      const base64data = reader.result.split(',')[1]
-      resolve(`data:application/zip;base64,${base64data}`)
-    }
-    reader.readAsDataURL(zipBlob)
-  })
+  const arrayBuffer = await zipBlob.arrayBuffer()
+  const base64data = Buffer.from(arrayBuffer).toString('base64')
+  return `data:application/zip;base64,${base64data}`
 }
 
 export default defineEventHandler(async (event) => {
