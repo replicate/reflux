@@ -177,7 +177,7 @@ export const usePredictionStore = defineStore('predictionStore', {
               '9c77a3c2f884193fcee4d89645f02a0b9def9434f9e03cb98460456b831c8772',
             input: {
               ...input,
-              number_of_outputs: 2,
+              number_of_outputs: 15,
               number_of_images_per_pose: 1,
               randomise_poses: true,
               output_format: 'webp',
