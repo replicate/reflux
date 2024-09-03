@@ -26,10 +26,16 @@ div
         )
         u-divider
         .px-6.py-3
-          u-button.mr-3(
+          u-button(
             @click="search_filter = 'replicate'"
             :color="search_filter === 'replicate' ? 'primary' : 'white'"
             label="On Replicate"
+            size="md"
+          )
+          u-button.mx-3(
+            @click="search_filter = 'huggingface'"
+            :color="search_filter === 'huggingface' ? 'primary' : 'white'"
+            label="On Hugging Face"
             size="md"
           )
           u-button(
@@ -39,7 +45,38 @@ div
             size="md"
           )
 
-      .grid.grid-cols-4.gap-3
+      .grid.grid-cols-1.gap-3(
+        v-if="search_filter === 'huggingface'"
+      )
+        u-form-group(
+          label="Huggingface path, or URL to the LoRA weights."
+          help="Ex: alvdansen/frosting_lane_flux"
+          name="hf_versions"
+        )
+          .flex.gap-3
+            u-input.flex-grow(
+              v-model="hf_version"
+              @keydown.enter="addVersion"
+            )
+            u-button(
+              @click="addVersion"
+              icon="i-heroicons-plus"
+              color="white"
+              trailing
+            ) Add
+        u-button.mr-2.mt-2(
+          v-for="(version, i) in hf_versions"
+          :key="`hf_version-${i}`"
+          color="white"
+          block
+        )
+          .flex-grow.text-left.font-light.break-all {{ version }}
+          u-divider.mx-1.h-4(orientation="vertical")
+          u-icon.w-4(
+            @click.stop="hf_versions = hf_versions.filter((v) => v !== version)"
+            name="i-heroicons-trash"
+          )
+      .grid.grid-cols-4.gap-3(v-else)
         .cursor-pointer.break-all.p-3(
           v-for="(version, i) in results"
           :key="`version-${i}`"
@@ -71,6 +108,7 @@ export default {
     return {
       replicate_api_token: useLocalStorage('reflux-replicate-api-token', null),
       versions: useLocalStorage('reflux-versions', []),
+      hf_versions: useLocalStorage('reflux-hf_versions', []),
       search_filter: useLocalStorage('reflux-search_filter', 'replicate'),
 
       metaSymbol,
@@ -78,7 +116,8 @@ export default {
     }
   },
   data: () => ({
-    query: ''
+    query: '',
+    hf_version: ''
   }),
   computed: {
     ...mapState(useVersionStore, ['version_options', 'getTriggerByVersion']),
@@ -129,6 +168,14 @@ export default {
       } else {
         this.versions.push(version)
       }
+    },
+    addVersion() {
+      if (!this.hf_version) {
+        return
+      }
+
+      this.hf_versions.push(this.hf_version)
+      this.hf_version = null
     }
   }
 }

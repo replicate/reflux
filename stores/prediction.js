@@ -60,54 +60,128 @@ export const usePredictionStore = defineStore('predictionStore', {
     trainings: useLocalStorage('reflux-trainings', [])
   }),
   actions: {
-    async createBatch({ versions, num_outputs, merge, input }) {
+    async createBatch({ versions, hf_versions, num_outputs, merge, input }) {
       try {
         const versionStore = useVersionStore()
+        const combined_versions = [...versions, ...hf_versions]
 
-        const predictions = await Promise.all(
-          versions.length === 2 && merge
-            ? Array.from(Array(num_outputs).keys()).map(() =>
-                $fetch('/api/prediction', {
-                  method: 'POST',
-                  body: {
-                    replicate_api_token: this.replicate_api_token,
-                    version: versions[0],
-                    input: {
-                      ...input,
-                      extra_lora: versionStore.getOwnerNameByVersion(
-                        versions[1]
-                      ),
-                      extra_lora_scale: input.lora_scale, // For now
-                      seed: Math.floor(Math.random() * 1000)
-                    }
+        let promises = []
+
+        // Merging, use num_outputs
+        if (combined_versions.length === 2 && merge) {
+          // Use the Replicate model + side car
+          if (versions.length > 0) {
+            const extra_lora =
+              hf_versions.length > 0
+                ? `huggingface.co/${hf_versions[0]}`
+                : versionStore.getOwnerNameByVersion(versions[1])
+
+            promises = Array.from(Array(num_outputs).keys()).map(() =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  version: versions[0],
+                  input: {
+                    ...input,
+                    extra_lora,
+                    extra_lora_scale: input.lora_scale, // For now
+                    seed: Math.floor(Math.random() * 1000)
                   }
-                })
-              )
-            : versions.length > 1
-            ? versions.map((version) =>
-                $fetch('/api/prediction', {
-                  method: 'POST',
-                  body: {
-                    replicate_api_token: this.replicate_api_token,
-                    version,
-                    input
+                }
+              })
+            )
+            // Use lucataco/flux-dev-multi-lora
+          } else {
+            promises = Array.from(Array(num_outputs).keys()).map(() =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  // https://replicate.com/lucataco/flux-dev-multi-lora
+                  version:
+                    'a738942df15c8c788b076ddd052256ba7923aade687b12109ccc64b2c3483aa1',
+                  input: {
+                    ...input,
+                    hf_loras: hf_versions,
+                    lora_scales: Array.from(
+                      Array(hf_versions.length).keys()
+                    ).map(() => input.lora_scale),
+                    seed: Math.floor(Math.random() * 1000)
                   }
-                })
-              )
-            : Array.from(Array(num_outputs).keys()).map(() =>
-                $fetch('/api/prediction', {
-                  method: 'POST',
-                  body: {
-                    replicate_api_token: this.replicate_api_token,
-                    version: versions[0],
-                    input: {
-                      ...input,
-                      seed: Math.floor(Math.random() * 1000)
-                    }
+                }
+              })
+            )
+          }
+          // Not merging, use num_outputs
+        } else if (combined_versions.length < 2) {
+          if (versions.length > 0) {
+            promises = Array.from(Array(num_outputs).keys()).map(() =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  version: versions[0],
+                  input: {
+                    ...input,
+                    seed: Math.floor(Math.random() * 1000)
                   }
-                })
-              )
-        )
+                }
+              })
+            )
+          } else if (hf_versions.length > 0) {
+            promises = Array.from(Array(num_outputs).keys()).map(() =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  // https://replicate.com/lucataco/flux-dev-multi-lora
+                  version:
+                    'a738942df15c8c788b076ddd052256ba7923aade687b12109ccc64b2c3483aa1',
+                  input: {
+                    ...input,
+                    hf_loras: [hf_versions[0]],
+                    lora_scales: [input.lora_scale],
+                    seed: Math.floor(Math.random() * 1000)
+                  }
+                }
+              })
+            )
+          }
+
+          // Not merging, create one of each
+        } else {
+          promises.push(
+            ...versions.map((version) =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  version,
+                  input
+                }
+              })
+            ),
+            ...hf_versions.map((hf_version) =>
+              $fetch('/api/prediction', {
+                method: 'POST',
+                body: {
+                  replicate_api_token: this.replicate_api_token,
+                  // https://replicate.com/lucataco/flux-dev-multi-lora
+                  version:
+                    'a738942df15c8c788b076ddd052256ba7923aade687b12109ccc64b2c3483aa1',
+                  input: {
+                    ...input,
+                    hf_loras: [hf_version],
+                    lora_scales: [input.lora_scale]
+                  }
+                }
+              })
+            )
+          )
+        }
+
+        const predictions = await Promise.all(promises)
 
         const baseSize = 300
         const aspectRatio = parseAspectRatio(input.aspect_ratio)

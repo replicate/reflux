@@ -14,25 +14,38 @@
       size="2xs"
       block
     )
-      .flex-grow.text-left.font-light {{ trigger.name }}
+      .flex-grow.text-left.font-light.break-all {{ trigger.name }}
       u-divider.mx-1.h-4(orientation="vertical")
       | {{ trigger.word }}
       u-divider.mx-1.h-4(orientation="vertical")
-      u-icon(
+      u-icon.w-4(
         @click.stop="versions = versions.filter((version) => version !== trigger.version)"
+        name="i-heroicons-trash"
+      )
+    u-button.mr-2.mt-2(
+      v-for="(version, i) in hf_versions"
+      :key="`hf_version-${i}`"
+      color="white"
+      size="2xs"
+      block
+    )
+      .flex-grow.text-left.font-light.break-all 🤗 {{ version }}
+      u-divider.mx-1.h-4(orientation="vertical")
+      u-icon.w-4(
+        @click.stop="hf_versions = hf_versions.filter((v) => v !== version)"
         name="i-heroicons-trash"
       )
   //- Merge
   u-form-group(
     :ui="{ container: '', hint: 'text-gray-500 dark:text-gray-400 flex align-center' }"
-    :help="versions.length !== 2 ? 'You can only merge two fine-tunes.' : ''"
+    :help="[...versions, ...hf_versions].length !== 2 ? 'You can only merge two fine-tunes.' : ''"
     label="Merge into same image"
     name="merge"
   )
     template(#hint)
       u-toggle(
         v-model="merge"
-        :disabled="versions.length !== 2"
+        :disabled="[...versions, ...hf_versions].length !== 2"
         size="lg"
       )
   //- Prompt
@@ -151,7 +164,7 @@
       )
   //- Number of outputs (conditional)
   u-form-group(
-    v-if="versions.length <= 1 || merge"
+    v-if="[...versions, ...hf_versions].length <= 1 || merge"
     label="Number of outputs"
     name="num_outputs"
   )
@@ -173,7 +186,7 @@
   u-button(
     v-if="replicate_api_token"
     @click="submit"
-    :disabled="loading || !replicate_api_token || versions.length <= 0"
+    :disabled="loading || !replicate_api_token || [...versions, ...hf_versions].length <= 0"
     :loading="loading"
     size="xl"
     block
@@ -196,6 +209,7 @@ export default {
   setup: () => ({
     replicate_api_token: useLocalStorage('reflux-replicate-api-token', null),
     versions: useLocalStorage('reflux-versions', []),
+    hf_versions: useLocalStorage('reflux-hf_versions', []),
     prompt: useLocalStorage('reflux-prompt', ''),
     aspect_ratio: useLocalStorage('reflux-aspect_ratio', '1:1'),
     num_outputs: useLocalStorage('reflux-num_outputs', 1),
@@ -245,6 +259,7 @@ export default {
       try {
         await this.createBatch({
           versions: this.versions,
+          hf_versions: this.hf_versions,
           num_outputs: this.num_outputs,
           merge: this.merge,
           input: {
